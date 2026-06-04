@@ -1,6 +1,6 @@
 <?php
 // Configurações do banco de dados
-$host = "192.168.100.170";
+$host = "localhost";
 $user = "root";
 $password = "0073007";
 $dbname = "panda_full_db";

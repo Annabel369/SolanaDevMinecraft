@@ -1,181 +1,97 @@
 <?php
-session_start(); // Inicia a sessão
+// Inicia a sessão no início do arquivo para garantir que esteja disponível
+session_start();
 
-// Conexão com o banco de dados (agora PDO)
-include 'connection.php'; // Este arquivo agora retorna a variável $pdo (sua conexão PDO)
+// Inclui a conexão com o banco de dados
+require_once '../../PanelCS2_PHP_RCON2-main/db_connect.php';
 
-// A variável $pdo estará disponível aqui após o include 'connection.php';
-$conn = $pdo; // Renomeamos para manter a consistência com seu código original, mas $pdo também funcionaria.
+// Variável para armazenar mensagens de erro
+$error = '';
 
-$error_message = ""; // Inicializa a mensagem vazia
-$ipUsuario = $_SERVER['REMOTE_ADDR']; // Obtém o IP do usuário
+// Verifica se a requisição é do tipo POST (se o formulário foi enviado)
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
 
-// ---- Exibir erros para depuração ----
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// ---- Verificação de IP banido ANTES do login ----
-// Usando PDO para statements preparados
-$stmt = $conn->prepare("SELECT ip FROM ban_ip WHERE ip = ?"); // Selecionamos apenas 'ip'
-$stmt->execute([$ipUsuario]); // execute() aceita um array de parâmetros
-$ban_ip = $stmt->fetchColumn(); // fetchColumn() retorna a primeira coluna da próxima linha
-
-if ($ban_ip) { // Se $ban_ip não for falso (ou seja, se encontrou um IP)
-    echo "<h1 style='color:red;text-align:center;'>Seu IP está banido por tentativas excessivas.</h1>";
-    exit;
-}
-$stmt = null; // Fecha o statement (opcional, mas boa prática com PDO)
-
-// ---- Processar login ----
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $username = $_POST["username"];
-    $password = $_POST["password"];
-
-    // Consulta de usuário
-    $stmt = $conn->prepare("SELECT password FROM users WHERE user = ?");
+    // Prepara a consulta para evitar injeção SQL
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->execute([$username]);
-    $hashed_password = $stmt->fetchColumn(); // Retorna o valor da coluna 'password' ou false se não encontrar
+    $user = $stmt->fetch();
 
-    if ($hashed_password && password_verify($password, $hashed_password)) {
-        $_SESSION["user"] = $username;
+    // Verifica se o usuário existe e se a senha está correta
+    if ($user && password_verify($password, $user['password'])) {
+        // Se as credenciais estiverem corretas, define as variáveis de sessão
+        $_SESSION['loggedin'] = true;
+        $_SESSION["username"] = $user["username"]; $_SESSION["user"] = $user["username"];
+
+        // Redireciona o usuário para a página protegida
         header("Location: protected_page.php");
-        exit();
+        exit;
     } else {
-        // ---- Registrar tentativa de login falha ----
-        $stmt = $conn->prepare("INSERT INTO login_attempts (ip, attempts, last_attempt)
-                               VALUES (?, 1, NOW())
-                               ON DUPLICATE KEY UPDATE attempts = attempts + 1, last_attempt = NOW()");
-        $stmt->execute([$ipUsuario]);
-        $stmt = null;
-
-        // ---- Verificar se IP deve ser banido após 3 falhas ----
-        $stmt = $conn->prepare("SELECT attempts FROM login_attempts WHERE ip = ?");
-        $stmt->execute([$ipUsuario]);
-        $attempts = $stmt->fetchColumn();
-        $stmt = null;
-
-        if ($attempts >= 3) {
-            $stmtBan = $conn->prepare("INSERT INTO ban_ip (ip) VALUES (?)");
-            $stmtBan->execute([$ipUsuario]);
-            $stmtBan = null;
-
-            echo "<h1 style='color:red;text-align:center;'>Seu IP foi banido por 3 tentativas inválidas.</h1>";
-            exit;
-        }
-
-        $error_message = "Usuário ou senha inválidos"; // Define mensagem de erro
+        // Define uma mensagem de erro em caso de falha no login
+        $error = $lang['login_error_message'];
     }
 }
 ?>
-
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="<?= $lang['lang_code'] ?>">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="../../PanelCS2_PHP_RCON2-main/img/favicon.png" type="image/png" />
+    <title><?= $lang['title'] ?></title>
+    <link rel="stylesheet" href="../../PanelCS2_PHP_RCON2-main/style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #4CAF50, #81C784);
-        }
+        /* CSS para o layout menor, como solicitado */
         .container {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
             max-width: 400px;
-            width: 100%;
+            margin-top: 5rem;
+            padding: 1.5rem;
         }
-        h1 {
-            text-align: center;
-            margin-bottom: 1rem;
-            color: #4CAF50;
-            font-size: 1.8rem;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        label {
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-        input {
-            padding: 0.8rem;
-            font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            transition: all 0.3s ease-in-out;
-        }
-        input:focus {
-            border-color: #4CAF50;
-            outline: none;
-            box-shadow: 0px 0px 5px rgba(76, 175, 80, 0.5);
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 0.8rem;
-            font-size: 1rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease-in-out;
-        }
-        button:hover {
-            background: #81C784;
-        }
-        .cloud-message {
-            margin-top: 1rem;
-            padding: 1rem 1.5rem;
-            background: #ffcc80;
-            color: #333;
-            border-radius: 20px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            font-size: 1rem;
-            font-weight: bold;
-            text-align: center;
-            position: relative;
-        }
-        .cloud-message:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-top: 10px solid #ffcc80;
+        .header {
+            padding-bottom: 0.75rem;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Login</h1>
-        <form method="POST">
-            <label for="username">Usuário:</label>
-            <input type="text" id="username" name="username" required>
-
-            <label for="password">Senha:</label>
-            <input type="password" id="password" name="password" required>
-
-            <button type="submit">Entrar</button>
-        </form>
-
-        <?php if (!empty($error_message)): ?>
-        <div class="cloud-message">
-            <?php echo htmlspecialchars($error_message); ?>
+        <div class="header" style="justify-content: center;">
+            <h1>
+                <img src="../../PanelCS2_PHP_RCON2-main/img/tdmueatdmueatdmu.png" alt="Counter-Strike 2" style="width: 50px;" />
+                <?= $lang['panel_title'] ?>
+            </h1>
         </div>
-        <?php endif; ?>
+
+        <div class="content-section active">
+            <h2 style="text-align: center; margin-bottom: 2rem;"><?= $lang['login_h2'] ?></h2>
+            <?php if ($error): ?>
+                <p style="color: var(--ban-red); text-align: center;"><?= $error ?></p>
+            <?php endif; ?>
+
+            <form action="login.php" method="POST" style="display: flex; flex-direction: column; gap: 1rem;">
+                <label for="username" style="font-weight: 600;"><?= $lang['username_label'] ?>:</label>
+                <input type="text" id="username" name="username" required 
+                       style="padding: 0.75rem; border-radius: 8px; border: none; background-color: #2a2a2a; color: #f0f0f0;">
+                
+                <label for="password" style="font-weight: 600;"><?= $lang['password_label'] ?>:</label>
+                <input type="password" id="password" name="password" required
+                       style="padding: 0.75rem; border-radius: 8px; border: none; background-color: #2a2a2a; color: #f0f0f0;">
+                
+                <button type="submit" 
+                        style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(45deg, var(--accent-purple), var(--accent-pink)); border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;">
+                    <?= $lang['login_button'] ?>
+                </button>
+            </form>
+
+            <?php if ($allow_registration): ?>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <a href="register.php" style="color: var(--accent-purple); text-decoration: none; font-weight: 600;">
+                        <?= $lang['register_link'] ?>
+                    </a>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>

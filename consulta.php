@@ -98,7 +98,7 @@ if (!file_put_contents($logFile, $logEntry, FILE_APPEND)) {
 // ---- Execução do comando via Docker ----
 $comandoSeguroParaExec = escapeshellcmd($comandoRecebido);
 //$fullDockerCommand = "sudo -u www-data docker run --rm -v /home/astral/astralcoin:/solana-token -v /home/astral/astralcoin/solana-data:/root/.config/solana heysolana " . $comandoSeguroParaExec;
-$fullDockerCommand = "sudo -u www-data docker run --rm -v /root/solana:/solana-token -v /root/solana/solana-data:/root/.config/solana heysolana " . $comandoSeguroParaExec;
+$fullDockerCommand = "sudo -u www-data docker run --rm -v /home/astral/astralcoin:/solana-token -v /home/astral/astralcoin/solana-data:/root/.config/solana heysolana " . $comandoSeguroParaExec;
 
 exec($fullDockerCommand, $output, $codigoRetorno);
 

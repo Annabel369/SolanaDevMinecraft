@@ -2,7 +2,7 @@
 // connection.php
 
 // Configuração do banco de dados
-$host = "debian.tail561849.ts.net"; // Seu hostname MariaDB na tailnet
+$host = "localhost"; // Seu hostname MariaDB na tailnet
 $user = "root";                    // Usuário do seu banco de dados
 $password = "0073007";             // Senha do seu banco de dados
 $dbname = "panda_full_db";         // Nome do seu banco de dados
@@ -15,12 +15,12 @@ $ssl_key = "/etc/mysql/ssl/server-key.pem";
 
 try {
     // Configuração da conexão com SSL
-    // PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true é crucial para validar o certificado do servidor
+    // PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false é crucial para validar o certificado do servidor
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $password, [
-        PDO::MYSQL_ATTR_SSL_CA => $ssl_ca,
-        PDO::MYSQL_ATTR_SSL_CERT => $ssl_cert,
-        PDO::MYSQL_ATTR_SSL_KEY => $ssl_key,
-        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true, // Garante que o PHP valide o certificado do servidor
+        
+        
+        
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // Garante que o PHP valide o certificado do servidor
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION      // Lança exceções em caso de erro
     ]);
 

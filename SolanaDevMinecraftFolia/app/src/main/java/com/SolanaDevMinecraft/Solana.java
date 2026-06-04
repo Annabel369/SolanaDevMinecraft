@@ -656,7 +656,7 @@ public boolean hasWallet(Player player) {
 // 📌 Método para criar uma carteira Solana para o jogador
  public void createWallet(Player player) {
     String playerName = player.getName().replace(" ", "_").toLowerCase();
-    String walletPath = String.format("wallets/%s_wallet.json", playerName);
+    String walletPath = String.format("/solana-token/wallets/%s_wallet.json", playerName);
     PreparedStatement statement = null; // ✅ Declarado uma vez
     String lang = getPlayerLanguage(player);
 
@@ -707,7 +707,7 @@ public boolean hasWallet(Player player) {
         String secretPhrase = walletInfo.secretPhrase;
 
         // 🔹 Lendo a chave privada da carteira gerada
-        String comandoLer = String.format("cat %s", walletPath);
+        String comandoLer = String.format("cat %s", walletPath); // walletPath já contém /solana-token/wallets/...
         String urlLer = String.format("http://%s/consulta.php?apikey=%s&comando=%s", host, apiwebkey, URLEncoder.encode(comandoLer, "UTF-8"));
 
         String responseLer = executeHttpGet(urlLer);
