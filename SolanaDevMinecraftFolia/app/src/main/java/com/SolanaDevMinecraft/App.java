@@ -436,6 +436,10 @@ public class App extends JavaPlugin implements Listener {
 
     @EventHandler
     public void aoClicarNoBau(PlayerInteractEvent event) {
+        // 1. IGNORA A MÃO SECUNDÁRIA (Evita duplicar o evento e bugar a abertura)
+        if (event.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND)
+            return;
+
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
             return;
 
@@ -450,29 +454,25 @@ public class App extends JavaPlugin implements Listener {
         if (!lockedChests.containsKey(chestLocation))
             return;
 
-        // 🚨 CORREÇÃO 1: Cancela o evento IMEDIATAMENTE para o baú não abrir antes da
-        // hora!
+        // Cancela o evento IMEDIATAMENTE para o Minecraft não tentar abrir o baú do
+        // jeito padrão
         event.setCancelled(true);
 
-        // 🔍 Verifica se o jogador está segurando o item correto
+        // 🔍 Verifica se o jogador está segurando o papel/etiqueta
         ItemStack itemNaMao = jogador.getInventory().getItemInMainHand();
-        // Ajustado para Material.PAPER conforme seu código, mas lembre-se se é papel ou
-        // NAME_TAG!
         if (itemNaMao == null || itemNaMao.getType() != Material.PAPER || !itemNaMao.hasItemMeta()) {
             jogador.sendMessage(
                     ChatColor.RED + "❌ Você precisa segurar uma etiqueta de senha para destrancar este baú!");
             return;
         }
 
-        // 🔑 CORREÇÃO 2: Forma correta e segura de pegar o DisplayName no Paper/Folia
-        // (usando Adventure API)
+        // 🔑 Obtém e limpa o nome do item usando a API do Paper/Folia
         net.kyori.adventure.text.Component displayComponent = itemNaMao.getItemMeta().displayName();
         if (displayComponent == null) {
             jogador.sendMessage(ChatColor.RED + "❌ Este papel não possui uma senha válida!");
             return;
         }
 
-        // Converte o Component para texto puro (PlainText) para poder comparar
         String nomeDoItem = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                 .serialize(displayComponent);
         String senhaEtiqueta = nomeDoItem.replace("Senha: ", "").trim();
@@ -484,27 +484,27 @@ public class App extends JavaPlugin implements Listener {
 
             lockedChests.remove(chestLocation); // Remove a proteção temporariamente
 
-            // Força a abertura do baú para o jogador agora que ele acertou a senha
-            jogador.openInventory(((Chest) block.getState()).getInventory());
+            // 🛠️ SOLUÇÃO PARA ABRIR: Abre o baú no próximo tick da região
+            // Fazer isso evita que o 'event.setCancelled(true)' force o fechamento da tela
+            Chest bau = (Chest) block.getState();
+            org.bukkit.Bukkit.getRegionScheduler().run(plugin, chestLocation, (task) -> {
+                jogador.openInventory(bau.getInventory());
+            });
 
-            // ⏳ Tranca o baú automaticamente após 10 segundos usando RegionScheduler do
-            // Folia
-            Bukkit.getRegionScheduler().runDelayed(plugin, chestLocation, (task) -> {
+            // ⏳ Tranca o baú automaticamente após 10 segundos (200 ticks)
+            org.bukkit.Bukkit.getRegionScheduler().runDelayed(plugin, chestLocation, (task) -> {
                 lockedChests.put(chestLocation, senhaCorreta);
                 jogador.sendMessage(ChatColor.RED + "🔒 O baú foi trancado novamente!");
                 getLogger().info("🔒 Baú trancado automaticamente.");
             }, 200L);
+
         } else {
             jogador.sendMessage(ChatColor.RED + "❌ Senha incorreta! Tente novamente.");
             getLogger().warning("⚠️ Tentativa de desbloqueio falha por " + jogador.getName());
 
-            // ⚡ CORREÇÃO: Faz cair um raio exatamente na localização do jogador
+            // ⚡ O raio cai no jogador folgado que errou a senha
             Location localDoJogador = jogador.getLocation();
             localDoJogador.getWorld().strikeLightning(localDoJogador);
-
-            // Opcional: Se quiser dar apenas o efeito visual e o som do raio,
-            // sem causar dano de fogo ou tirar vida do jogador, use a linha abaixo:
-            // localDoJogador.getWorld().strikeLightningEffect(localDoJogador);
         }
     }
 
