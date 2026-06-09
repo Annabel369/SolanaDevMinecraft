@@ -363,45 +363,29 @@ private void sendTransactionMessage(Player sender, String recipient, double amou
 
     // 📌 Método para obter o endereço da carteira do banco de dados
     public String getWalletFromDatabase(String username) {
-    String walletAddress = null;
-    Connection manualConnection = null;
+        String walletAddress = null;
 
-    try {
-        LOGGER.info("Conectando ao banco de dados para buscar a carteira do usuário: " + username);
-
-        // Obtém as configurações do banco de dados do config.yml
-        String url = config.getString("database.url");
-        String user = config.getString("database.user");
-        String password = config.getString("database.password");
-
-        // Estabelece a conexão com o banco de dados
-        manualConnection = DriverManager.getConnection(url, user, password);
-
-        // Consulta para buscar a carteira vinculada ao jogador
-        String query = "SELECT c.endereco FROM carteiras c JOIN jogadores j ON c.jogador_id = j.id WHERE LOWER(j.nome) = LOWER(?)";
-        PreparedStatement stmt = manualConnection.prepareStatement(query);
-        stmt.setString(1, username.trim());
-
-        ResultSet rs = stmt.executeQuery();
-
-        if (rs.next()) {
-            walletAddress = rs.getString("endereco");
-            LOGGER.info("Carteira encontrada para o usuário " + username + ": " + walletAddress);
-        } else {
-            LOGGER.warning("Nenhuma carteira encontrada para o usuário: " + username);
-        }
-    } catch (Exception e) {
-        LOGGER.severe("Erro ao buscar carteira no banco: " + e.getMessage());
-    } finally {
         try {
-            if (manualConnection != null) manualConnection.close();
-        } catch (Exception e) {
-            LOGGER.severe("Erro ao fechar conexão: " + e.getMessage());
+            // Consulta para buscar a carteira vinculada ao jogador usando a conexão existente
+            String query = "SELECT c.endereco FROM carteiras c JOIN jogadores j ON c.jogador_id = j.id WHERE LOWER(j.nome) = LOWER(?)";
+            try (PreparedStatement stmt = this.connection.prepareStatement(query)) {
+                stmt.setString(1, username.trim());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        walletAddress = rs.getString("endereco");
+                        LOGGER.info("Carteira encontrada para o usuário " + username + ": " + walletAddress);
+                    } else {
+                        LOGGER.warning("Nenhuma carteira encontrada para o usuário: " + username);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.severe("Erro ao buscar carteira no banco: " + e.getMessage());
+            e.printStackTrace();
         }
-    }
 
-    return walletAddress;
-}
+        return walletAddress;
+    }
 
     public void logWalletAddress(Player player) {
     String username = player.getName();

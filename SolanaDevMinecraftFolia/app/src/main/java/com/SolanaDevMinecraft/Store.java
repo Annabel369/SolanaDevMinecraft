@@ -846,8 +846,8 @@ public void buySimpleBook(Player player) {
         //ajustarSaldo(player, "take", price);
 
     // 🔹 Executa o comando para dar um livro ao jogador
-    String command = String.format("give %s minecraft:book 1", player.getName());
-    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command); // 🔹 Executa o comando como console
+    String commandStr = String.format("give %s minecraft:book 1", player.getName());
+    Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandStr));
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -1030,54 +1030,34 @@ public void buyAxolotlBucket(Player player) {
 // 📌 Método para ajustar o saldo do jogador do sql do plugin EssentialsX (nao e necessario mas tenta mater os dados iguais do sql e do mysql)
 //fallback
     public void ajustarSaldo(Player player, String tipo, double valor) {
-    System.out.println("DEBUG (ajustarSaldo): Iniciado para " + player.getName() + ", tipo: " + tipo + ", quantia: " + valor);
-
-    // *** NOVA LINHA DE DEBUG: Verificar se 'plugin' é nulo ***
     if (this.plugin == null) {
-        System.err.println("ERROR (ajustarSaldo): Instância do plugin é NULA! Não é possível agendar a tarefa.");
-        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
- player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
-        // Saia do método para evitar um NullPointerException
         return;
     }
-    System.out.println("DEBUG (ajustarSaldo): Instância do plugin está OK.");
 
-    final String playerName = player.getName(); // Captura o nome do jogador
+    final String playerName = player.getName();
 
     try {
-        // Bloco try-catch para capturar exceções do próprio runTaskLater
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> { // Use 'this.plugin' para clareza
+        // No Folia, comandos do console devem ser despachados via GlobalRegionScheduler
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
             try {
-                System.out.println("DEBUG (ajustarSaldo - Main Thread): Executando comando eco para " + playerName + "...");
                 if (tipo.equalsIgnoreCase("give")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco give " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("take")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco take " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("set")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco set " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco set " + playerName + " " + valor + "'");
                 } else {
-                    Player onlinePlayer = Bukkit.getPlayer(playerName);
-                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
-                        onlinePlayer.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
-                    }
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Tipo de ajuste inválido para " + playerName + ": " + tipo);
+                    player.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
                 }
-                System.out.println("DEBUG (ajustarSaldo - Main Thread): Comando eco despachado com sucesso.");
             } catch (Exception e) {
-                System.err.println("ERROR (ajustarSaldo - Main Thread - Inner): Erro ao despachar comando eco para " + playerName);
-                e.printStackTrace(); // Imprime o stack trace completo da exceção interna!
+                System.err.println("ERROR (ajustarSaldo): Erro ao despachar comando eco para " + playerName);
+                e.printStackTrace();
             }
-        }, 0L); // 0L significa executar na próxima tick disponível
-
-        System.out.println("DEBUG (ajustarSaldo): Chamada para agendador da thread principal finalizada.");
+        });
 
     } catch (Exception e) {
-        // Este catch pegará exceções se o próprio agendamento falhar (muito raro, mas possível)
-        System.err.println("ERROR (ajustarSaldo - Outer): Exceção ao agendar tarefa com Bukkit.getScheduler()!");
-        e.printStackTrace(); // Imprime o stack trace completo da exceção de agendamento!
+        System.err.println("ERROR (ajustarSaldo): Exceção ao agendar tarefa no GlobalRegionScheduler!");
+        e.printStackTrace();
     }
 }
 
@@ -1094,8 +1074,10 @@ public void transferirtokengamer(Player player, String recipient, double amount)
         stmtDestinatario.executeUpdate();
 
         // Comandos do Bukkit para manter a sincronização com o sistema do jogo
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + recipient + " " + amount);
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + player.getName() + " " + amount); // Corrigido
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + recipient + " " + amount);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + player.getName() + " " + amount); // Corrigido
+        });
 
     } catch (SQLException e) {
         System.out.println("⚠ Erro ao atualizar o banco de dados: " + e.getMessage());

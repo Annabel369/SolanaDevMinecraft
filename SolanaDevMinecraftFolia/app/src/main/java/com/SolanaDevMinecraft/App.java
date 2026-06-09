@@ -647,19 +647,14 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
 
     
     if (command.getName().equalsIgnoreCase("saldo")) {
-    if (!(sender instanceof Player)) {
-        sender.sendMessage("Este comando só pode ser usado por jogadores.");
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("Este comando só pode ser usado por jogadores.");
+            return true;
+        }
+        checkPandaBalance((Player) sender);
         return true;
     }
-
-    Player player = (Player) sender;
-    String lang = store.getPlayerLanguage(player);
-
-    checkBalance(player); // Executa a verificação de saldo
-
-    return true;
-}
- else if (command.getName().equalsIgnoreCase("loan")) {
+ else if (command.getName().equalsIgnoreCase("loan") || command.getName().equalsIgnoreCase("emprestimo")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if (args.length == 1) {
@@ -670,13 +665,13 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                     player.sendMessage("Por favor, insira um valor válido.");
                 }
             } else {
-                player.sendMessage("Uso correto: /loan <quantidade>");
+                player.sendMessage("Uso correto: /emprestimo <quantidade>");
             }
         } else {
             sender.sendMessage("Este comando só pode ser usado por jogadores.");
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("createWallet")) {
+    } else if (command.getName().equalsIgnoreCase("createWallet") || command.getName().equalsIgnoreCase("criarcarteira")) {
     if (sender instanceof Player) {
         Player player = (Player) sender;
         String lang = store.getPlayerLanguage(player); // Obtém o idioma do jogador
@@ -693,7 +688,9 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                             .append(Component.text("This may take 5 seconds...", NamedTextColor.GREEN))
                             .append(Component.text("\n🌐 Connecting to Solana bank...", NamedTextColor.AQUA)));
                         }
-        solana.createWallet(player);
+        CompletableFuture.runAsync(() -> {
+            solana.createWallet(player);
+        });
     } else {
         sender.sendMessage("Este comando so pode ser usado por jogadores.");
 
@@ -718,17 +715,19 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                 .append(Component.text("\n🌐 Connecting to Solana bank...", NamedTextColor.AQUA)));
         }
 
-        try {
-            solana.solicitarAirdrop(player);
-        } catch (Exception e) {
-            player.sendMessage(Component.text("❌ Erro ao solicitar o airdrop: " + e.getMessage(), NamedTextColor.RED));
-            e.printStackTrace(); // útil para debug no console
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                solana.solicitarAirdrop(player);
+            } catch (Exception e) {
+                player.sendMessage(Component.text("❌ Erro ao solicitar o airdrop: " + e.getMessage(), NamedTextColor.RED));
+                e.printStackTrace(); // útil para debug no console
+            }
+        });
     } else {
         sender.sendMessage("Este comando só pode ser usado por jogadores.");
     }
     return true;
-} else if (command.getName().equalsIgnoreCase("paydebt")) {
+} else if (command.getName().equalsIgnoreCase("paydebt") || command.getName().equalsIgnoreCase("pagardivida")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if (args.length == 1) {
@@ -739,13 +738,13 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                     player.sendMessage("Por favor, insira um valor válido.");
                 }
             } else {
-                player.sendMessage("Uso correto: /paydebt <quantidade>");
+                player.sendMessage("Uso correto: /pagardivida <quantidade>");
             }
         } else {
             sender.sendMessage("Este comando só pode ser usado por jogadores.");
         }
         return true;
-   } else if (command.getName().equalsIgnoreCase("buycurrency")) {
+   } else if (command.getName().equalsIgnoreCase("buycurrency") || command.getName().equalsIgnoreCase("compracomsolana")) {
     if (sender instanceof Player) {
         Player player = (Player) sender;
         if (args.length == 1) {
@@ -765,27 +764,29 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                             .append(Component.text("\n🌐 Connecting to Solana bank...", NamedTextColor.AQUA)));
                         }
                 double solAmount = Double.parseDouble(args[0]);
-                solana.buyGameCurrency(player, solAmount);
+                CompletableFuture.runAsync(() -> {
+                    solana.buyGameCurrency(player, solAmount);
+                });
             } catch (NumberFormatException e) {
-                player.sendMessage("Uso correto: /buycurrency <quantidade_SOL>");
+                player.sendMessage("Uso correto: /compracomsolana <quantidade_SOL>");
             }
         } else {
-            player.sendMessage("Uso correto: /buycurrency <quantidade_SOL>");
+            player.sendMessage("Uso correto: /compracomsolana <quantidade_SOL>");
         }
     } else {
         sender.sendMessage("Este comando só pode ser usado por jogadores.");
     }
     return true;
-} else if (command.getName().equalsIgnoreCase("buyapple")) {
+} else if (command.getName().equalsIgnoreCase("buyapple") || command.getName().equalsIgnoreCase("comprar_maca")) {
     if (sender instanceof Player) {
         Player player = (Player) sender;
         store.buyEnchantedApple(player);
     }
     return true;
-} else if (command.getName().equalsIgnoreCase("refundsolana")) {
+} else if (command.getName().equalsIgnoreCase("refundsolana") || command.getName().equalsIgnoreCase("reembolsosolana")) {
             if (args.length < 1) {
 
-                sender.sendMessage(ChatColor.RED + "Uso correto: /refundsolana <signature>");
+                sender.sendMessage(ChatColor.RED + "Uso correto: /reembolsosolana <signature>");
                 return false;
             }
             if (sender instanceof Player) {
@@ -808,16 +809,18 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
             }
 
             String transactionSignature = args[0]; // Obtém a assinatura da transação
-            solana.refundSolana(player, transactionSignature); // Chama a função de reembolso com a assinatura
+            CompletableFuture.runAsync(() -> {
+                solana.refundSolana(player, transactionSignature); // Chama a função de reembolso com a assinatura
+            });
             }
             return true;
-        } else if (command.getName().equalsIgnoreCase("buyemerald")) {
+        } else if (command.getName().equalsIgnoreCase("buyemerald") || command.getName().equalsIgnoreCase("comprar_esmeralda")) {
     if (sender instanceof Player) {
         Player player = (Player) sender;
         store.buyEmerald(player);
     }
     return true;
-} else if (command.getName().equalsIgnoreCase("soltransfer")) {
+} else if (command.getName().equalsIgnoreCase("soltransfer") || command.getName().equalsIgnoreCase("soltransferir")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if (args.length == 2) {
@@ -839,12 +842,14 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                         }
 
                     double amount = Double.parseDouble(args[1]);
-                    solana.transferSolana(player, recipient, amount);
+                    CompletableFuture.runAsync(() -> {
+                        solana.transferSolana(player, recipient, amount);
+                    });
                 } catch (NumberFormatException e) {
-                    player.sendMessage("Uso correto: /soltransfer <jogador> <quantidade_SOL>");
+                    player.sendMessage("Uso correto: /soltransferir <jogador> <quantidade_SOL>");
                 }
             } else {
-                player.sendMessage("Uso correto: /soltransfer <jogador> <quantidade_SOL>");
+                player.sendMessage("Uso correto: /soltransferir <jogador> <quantidade_SOL>");
             }
         } else {
             sender.sendMessage("Este comando so pode ser usado por jogadores.");
@@ -861,25 +866,27 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
                     double amount = Double.parseDouble(args[1]);
                     store.transferirtokengamer(player, recipient, amount);
                 } catch (NumberFormatException e) {
-                    player.sendMessage("Uso correto: /transferirtokengamer <jogador> <quantidade_SOL>");
+                    player.sendMessage("Uso correto: /transferirtokengamer <jogador> <quantidade>");
                 }
             } else {
-                player.sendMessage("Uso correto: /transferirtokengamer <jogador> <quantidade_SOL>");
+                player.sendMessage("Uso correto: /transferirtokengamer <jogador> <quantidade>");
             }
         } else {
             sender.sendMessage("Este comando so pode ser usado por jogadores.");
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("solbalance")) {
+    } else if (command.getName().equalsIgnoreCase("solbalance") || command.getName().equalsIgnoreCase("solsaldo")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
-            solana.handleSolBalance(player);
+            CompletableFuture.runAsync(() -> {
+                solana.handleSolBalance(player);
+            });
         } else {
             sender.sendMessage("Este comando so pode ser usado por jogadores.");
         }
         return true;
     
-    } else if (command.getName().equalsIgnoreCase("buySpinningWand")) {
+    } else if (command.getName().equalsIgnoreCase("buySpinningWand") || command.getName().equalsIgnoreCase("comprar_varinha")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySpinningWand(player);
@@ -891,7 +898,7 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
             limparTrilhaDeLuz(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyIronBlock")) {
+    } else if (command.getName().equalsIgnoreCase("buyIronBlock") || command.getName().equalsIgnoreCase("comprar_bloco_ferro")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyIronBlock(player);
@@ -899,143 +906,143 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
         return true;
     }
     
-    else if (command.getName().equalsIgnoreCase("buyiron")) {
+    else if (command.getName().equalsIgnoreCase("buyiron") || command.getName().equalsIgnoreCase("comprar_ferro")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyIronBlock(player);
         }
         return true;
     }
-     else if (command.getName().equalsIgnoreCase("buyEmeraldBlock")) {
+     else if (command.getName().equalsIgnoreCase("buyEmeraldBlock") || command.getName().equalsIgnoreCase("comprar_bloco_esmeralda")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyEmeraldBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buygold")) {
+    } else if (command.getName().equalsIgnoreCase("buygold") || command.getName().equalsIgnoreCase("comprar_ouro")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyGoldBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buydiamond")) {
+    } else if (command.getName().equalsIgnoreCase("buydiamond") || command.getName().equalsIgnoreCase("comprar_diamante")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyDiamondBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyLapis")) {
+    } else if (command.getName().equalsIgnoreCase("buyLapis") || command.getName().equalsIgnoreCase("comprar_lapis")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyLapisBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyQuartz")) {
+    } else if (command.getName().equalsIgnoreCase("buyQuartz") || command.getName().equalsIgnoreCase("comprar_quartzo")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyQuartzBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyClay")) {
+    } else if (command.getName().equalsIgnoreCase("buyClay") || command.getName().equalsIgnoreCase("comprar_argila")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyClayBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buySimpleMap")) {
+    } else if (command.getName().equalsIgnoreCase("buySimpleMap") || command.getName().equalsIgnoreCase("comprar_mapa")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySimpleMap(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buySimpleCompass")) {
+    } else if (command.getName().equalsIgnoreCase("buySimpleCompass") || command.getName().equalsIgnoreCase("comprar_bussola")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySimpleCompass(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buySimpleFishingRod")) {
+    } else if (command.getName().equalsIgnoreCase("buySimpleFishingRod") || command.getName().equalsIgnoreCase("comprar_vara_pesca")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySimpleFishingRod(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyAxolotlBucket")) {
+    } else if (command.getName().equalsIgnoreCase("buyAxolotlBucket") || command.getName().equalsIgnoreCase("comprar_balde_peixe")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyAxolotlBucket(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyRedstone")) {
+    } else if (command.getName().equalsIgnoreCase("buyRedstone") || command.getName().equalsIgnoreCase("comprar_redstone")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyRedstoneBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buySandBlock")) {
+    } else if (command.getName().equalsIgnoreCase("buySandBlock") || command.getName().equalsIgnoreCase("comprar_areia")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySandBlock(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyAllTools")) {
+    } else if (command.getName().equalsIgnoreCase("buyAllTools") || command.getName().equalsIgnoreCase("comprar_ferramentas")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyAllTools(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyAllFood")) {
+    } else if (command.getName().equalsIgnoreCase("buyAllFood") || command.getName().equalsIgnoreCase("comprar_comida")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyAllFood(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buySimpleBook")) {
+    } else if (command.getName().equalsIgnoreCase("buySimpleBook") || command.getName().equalsIgnoreCase("comprar_livro")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buySimpleBook(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyWingRelic")) {
+    } else if (command.getName().equalsIgnoreCase("buyWingRelic") || command.getName().equalsIgnoreCase("comprar_reliquia_asa")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyWingRelic(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyShulkerKit")) {
+    } else if (command.getName().equalsIgnoreCase("buyShulkerKit") || command.getName().equalsIgnoreCase("comprar_kit_shulker")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyShulkerKit(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyBootRelic")) {
+    } else if (command.getName().equalsIgnoreCase("buyBootRelic") || command.getName().equalsIgnoreCase("comprar_reliquia_bota")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyBootRelic(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("stairs")) {
+    } else if (command.getName().equalsIgnoreCase("stairs") || command.getName().equalsIgnoreCase("escadas")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.venderEscadas(player);
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("buyThorAxe")) {
+    } else if (command.getName().equalsIgnoreCase("buyThorAxe") || command.getName().equalsIgnoreCase("comprar_machado_thor")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyThorAxe(player);
         }
         return true;
     }
-    else if (command.getName().equalsIgnoreCase("buynetherite")) {
+    else if (command.getName().equalsIgnoreCase("buynetherite") || command.getName().equalsIgnoreCase("comprar_netherite")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             store.buyNetheriteBlock(player);
         }
         return true;
-    } if (command.getName().equalsIgnoreCase("eco")) {
+    } else if (command.getName().equalsIgnoreCase("eco") || command.getName().equalsIgnoreCase("economia")) {
     if (args.length < 2) {
-        sender.sendMessage("❌ Uso incorreto! Formato: /eco [give/take/set/balance] [jogador] [valor]");
+        sender.sendMessage("❌ Uso incorreto! Formato: /economia [give/take/set/balance] [jogador] [valor]");
         return true;
     }
 
@@ -1045,7 +1052,7 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
     // Verifica se o comando é para mostrar o saldo
     Player player = Bukkit.getPlayerExact(playerName);
 if (player != null) {
-    checkBalance(player);
+    checkPandaBalance(player);
 } else {
     sender.sendMessage("❌ Jogador não encontrado!");
 }
@@ -1053,7 +1060,7 @@ if (player != null) {
 
     // Comandos give/take/set exigem um terceiro argumento
     if (args.length < 3) {
-        sender.sendMessage("❌ Uso incorreto! Formato: /eco [give/take/set] [jogador] [valor]");
+        sender.sendMessage("❌ Uso incorreto! Formato: /economia [give/take/set] [jogador] [valor]");
         return true;
     }
 
@@ -1061,14 +1068,9 @@ if (player != null) {
     
     sender.sendMessage("🥽 :" + action + " " + playerName + " " + amount);
     return true;
-}
-
- if (!sender.hasPermission("eco.admin")) {
-        sender.sendMessage("❌ Você não tem permissão para executar este comando.");
-        return true;
-    } else if (command.getName().equalsIgnoreCase("ban")) {
+} else if (command.getName().equalsIgnoreCase("ban") || command.getName().equalsIgnoreCase("banir")) {
         if (args.length < 2) {
-            sender.sendMessage("❌ Uso incorreto! Formato: /ban [jogador] [motivo]");
+            sender.sendMessage("❌ Uso incorreto! Formato: /banir [jogador] [motivo]");
             return true;
         }
 
@@ -1085,9 +1087,9 @@ if (player != null) {
             sender.sendMessage("❌ Jogador não encontrado.");
         }
         return true;
-    } else if (command.getName().equalsIgnoreCase("unban")) {
+    } else if (command.getName().equalsIgnoreCase("unban") || command.getName().equalsIgnoreCase("desbanir")) {
         if (args.length < 1) {
-            sender.sendMessage("❌ Uso incorreto! Formato: /unban [jogador]");
+            sender.sendMessage("❌ Uso incorreto! Formato: /desbanir [jogador]");
             return true;
         }
 
@@ -1095,7 +1097,7 @@ if (player != null) {
         Bukkit.getBanList(BanList.Type.NAME).pardon(playerName);
         sender.sendMessage("✅ O jogador " + playerName + " foi desbanido!");
         return true;
-    } else if (command.getName().equalsIgnoreCase("back")) {
+    } else if (command.getName().equalsIgnoreCase("back") || command.getName().equalsIgnoreCase("voltar")) {
     CompletableFuture.runAsync(() -> {
         try {
             if (!(sender instanceof Player)) {
@@ -1106,11 +1108,11 @@ if (player != null) {
             Player player = (Player) sender;
             
             // Debug para verificar se o jogador está registrado
-            getLogger().info("🔍 Comando /back executado por: " + player.getName());
+            getLogger().info("🔍 Comando /voltar executado por: " + player.getName());
 
             if (!lastLocations.containsKey(player) || lastLocations.get(player) == null) {
                 player.sendMessage("❌ Nenhuma posição anterior encontrada.");
-                getLogger().warning("⚠️ Tentativa de /back sem localização armazenada para " + player.getName());
+                getLogger().warning("⚠️ Tentativa de /voltar sem localização armazenada para " + player.getName());
                 return;
             }
 
@@ -1124,7 +1126,7 @@ if (player != null) {
             player.sendMessage("🚀 Você voltou para sua última posição!");
 
         } catch (Exception e) {
-            getLogger().severe("❌ Erro ao executar o comando /back: " + e.getMessage());
+            getLogger().severe("❌ Erro ao executar o comando /voltar: " + e.getMessage());
             e.printStackTrace();
         }
     });
@@ -1150,10 +1152,10 @@ if (player != null) {
 
         tpaRequests.put(target, player);
         player.sendMessage("✉️ Pedido de teleporte enviado para " + target.getName() + ".");
-        target.sendMessage("📩 " + player.getName() + " deseja se teleportar até você! Use `/tpaccept` para aceitar ou `/tpdeny` para negar.");
+        target.sendMessage("📩 " + player.getName() + " deseja se teleportar até você! Use `/tpaceitar` para aceitar ou `/tprecusar` para negar.");
 
         return true;
-    } else if (command.getName().equalsIgnoreCase("tpaccept")) {
+    } else if (command.getName().equalsIgnoreCase("tpaccept") || command.getName().equalsIgnoreCase("tpaceitar")) {
         if (!(sender instanceof Player)) return true;
         Player target = (Player) sender;
 
@@ -1168,7 +1170,7 @@ if (player != null) {
         target.sendMessage("✅ Teleporte realizado com sucesso.");
 
         return true;
-    } else if (command.getName().equalsIgnoreCase("tpdeny")) {
+    } else if (command.getName().equalsIgnoreCase("tpdeny") || command.getName().equalsIgnoreCase("tprecusar")) {
         if (!(sender instanceof Player)) return true;
         Player target = (Player) sender;
 
@@ -1183,7 +1185,7 @@ if (player != null) {
 
         return true;
     } // 🔹 Correção do comando /sethome
-    else if (command.getName().equalsIgnoreCase("sethome")) {
+    else if (command.getName().equalsIgnoreCase("sethome") || command.getName().equalsIgnoreCase("definircasa")) {
     if (!(sender instanceof Player)) {
         sender.sendMessage("❌ Este comando só pode ser usado por um jogador!");
         return true;
@@ -1192,7 +1194,7 @@ if (player != null) {
     Player jogador = (Player) sender; // Faz o cast para Player
     
     if (args.length == 0) {
-        jogador.sendMessage("❌ Use `/sethome <nome>` para definir uma casa!");
+        jogador.sendMessage("❌ Use `/definircasa <nome>` para definir uma casa!");
         return true;
     }
 
@@ -1202,12 +1204,12 @@ if (player != null) {
     // Registra a casa com o nome fornecido
     registrarCasa(jogador, nomeCasa, local);
 
-    jogador.sendMessage("🏡 Casa '" + nomeCasa + "' foi definida! Use `/home " + nomeCasa + "` para voltar.");
+    jogador.sendMessage("🏡 Casa '" + nomeCasa + "' foi definida! Use `/casa " + nomeCasa + "` para voltar.");
     return true;
 }
 
 
-else if (command.getName().equalsIgnoreCase("home")) {
+else if (command.getName().equalsIgnoreCase("home") || command.getName().equalsIgnoreCase("casa")) {
     if (!(sender instanceof Player)) {
         sender.sendMessage("❌ Este comando só pode ser usado por um jogador!");
         return true;
@@ -1255,7 +1257,7 @@ else if (command.getName().equalsIgnoreCase("home")) {
             }
 
         } catch (Exception e) {
-            getLogger().severe("❌ Exceção ao executar /home: " + e.getMessage());
+            getLogger().severe("❌ Exceção ao executar /casa: " + e.getMessage());
             e.printStackTrace();
         }
     });
@@ -1263,9 +1265,9 @@ else if (command.getName().equalsIgnoreCase("home")) {
     return true;
 }
 
-else if (command.getName().equalsIgnoreCase("homereset")) {
-    if (!(sender instanceof Player) || !sender.hasPermission("home.admin")) { // Apenas admins podem executar
-        sender.sendMessage("❌ Você não tem permissão para resetar as casas!");
+else if (command.getName().equalsIgnoreCase("homereset") || command.getName().equalsIgnoreCase("resetarcasas")) {
+    if (!(sender instanceof Player)) { 
+        sender.sendMessage("❌ Apenas jogadores podem usar este comando.");
         return true;
     }
 
@@ -1276,8 +1278,8 @@ else if (command.getName().equalsIgnoreCase("homereset")) {
             stmt.execute("TRUNCATE TABLE homes"); // Remove todos os registros da tabela
             casas.clear(); // Limpa o cache de casas armazenado no plugin
 
-            sender.sendMessage(ChatColor.RED + "⚠️ TODAS as casas foram resetadas pelo administrador!");
-            getLogger().warning("⚠️ O administrador " + sender.getName() + " resetou todas as casas!");
+            sender.sendMessage(ChatColor.RED + "⚠️ TODAS as casas foram resetadas!");
+            getLogger().warning("⚠️ O jogador " + sender.getName() + " resetou todas as casas!");
 
         } catch (SQLException e) {
             sender.sendMessage(ChatColor.RED + "❌ Erro ao resetar as casas!");
@@ -1287,26 +1289,22 @@ else if (command.getName().equalsIgnoreCase("homereset")) {
     });
 
     return true;
-} else if (command.getName().equalsIgnoreCase("buyNetherRelic")) {
+} else if (command.getName().equalsIgnoreCase("buyNetherRelic") || command.getName().equalsIgnoreCase("comprar_reliquia_nether")) {
     if (!(sender instanceof Player)) {
         sender.sendMessage(ChatColor.RED + "❌ Este comando só pode ser usado por um jogador!");
         return true;
     }
     Player player = (Player) sender;
-    if (!player.hasPermission("netherrelic.buy")) {
-        player.sendMessage(ChatColor.RED + "❌ Você não tem permissão para comprar relíquias do Nether!");
-        return true;
-    }
-
+    
     store.buyNetherRelic(player);
     
     return true;
 }
 
 
-else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
-    if (!(sender instanceof Player) || !sender.hasPermission("lockchest.admin")) { // Apenas admins podem executar
-        sender.sendMessage("❌ Você não tem permissão para resetar os baus!");
+else if (command.getName().equalsIgnoreCase("lockchestressettingall") || command.getName().equalsIgnoreCase("resetarbaus")) {
+    if (!(sender instanceof Player)) { 
+        sender.sendMessage("❌ Apenas jogadores podem usar este comando.");
         return true;
     }
 
@@ -1317,8 +1315,8 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
             stmt.execute("TRUNCATE TABLE locked_chests"); // Remove todos os registros da tabela
             casas.clear(); // Limpa o cache de casas armazenado no plugin
 
-            sender.sendMessage(ChatColor.RED + "⚠️ TODAS as casas foram resetadas pelo administrador!");
-            getLogger().warning("⚠️ O administrador " + sender.getName() + " resetou todas os baus!");
+            sender.sendMessage(ChatColor.RED + "⚠️ TODAS as casas foram resetadas!");
+            getLogger().warning("⚠️ O jogador " + sender.getName() + " resetou todas os baus!");
 
         } catch (SQLException e) {
             sender.sendMessage(ChatColor.RED + "❌ Erro ao resetar as casas!");
@@ -1330,17 +1328,17 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
     return true;
 }
 
-    else if (command.getName().equalsIgnoreCase("lockchest")) {
+    else if (command.getName().equalsIgnoreCase("lockchest") || command.getName().equalsIgnoreCase("trancarbau")) {
     if (!(sender instanceof Player)) {
         sender.sendMessage(ChatColor.RED + "❌ Este comando só pode ser usado por um jogador!");
         return true;
     }
 
     Player p = (Player) sender;
-    getLogger().info("🔍 Comando /lockchest executado por: " + p.getName());
+    getLogger().info("🔍 Comando /trancarbau executado por: " + p.getName());
 
     if (args.length < 1) {
-        sender.sendMessage(ChatColor.RED + "❌ Uso incorreto! Formato: /lockchest [senha]");
+        sender.sendMessage(ChatColor.RED + "❌ Uso incorreto! Formato: /trancarbau [senha]");
         return true;
     }
 
@@ -1419,7 +1417,7 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
 }
 
     // 🔹 Correção do comando /unlockchest
-    else if (command.getName().equalsIgnoreCase("unlockchest")) {
+    else if (command.getName().equalsIgnoreCase("unlockchest") || command.getName().equalsIgnoreCase("destrancarbau")) {
     if (!(sender instanceof Player)) {
         sender.sendMessage("❌ Este comando só pode ser usado por um jogador!");
         return true;
@@ -1435,7 +1433,7 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
     Location chestLocation = block.getLocation();
 
     if (args.length < 1) {
-        sender.sendMessage("❌ Uso incorreto! Formato: /unlockchest [senha]");
+        sender.sendMessage("❌ Uso incorreto! Formato: /destrancarbau [senha]");
         return true;
     }
 
@@ -1494,9 +1492,9 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
 
 
 
- else if (command.getName().equalsIgnoreCase("unban-ip")) {
+ else if (command.getName().equalsIgnoreCase("unban-ip") || command.getName().equalsIgnoreCase("desbanir-ip")) {
         if (args.length < 1) {
-            sender.sendMessage("❌ Uso incorreto! Formato: /unban-ip [endereço IP]");
+            sender.sendMessage("❌ Uso incorreto! Formato: /desbanir-ip [endereço IP]");
             return true;
         }
 
@@ -1507,7 +1505,7 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
 
         sender.sendMessage("✅ O IP " + ipAddress + " foi desbanido com sucesso!");
         return true;
-    } else if (command.getName().equalsIgnoreCase("list-bans")) {
+    } else if (command.getName().equalsIgnoreCase("list-bans") || command.getName().equalsIgnoreCase("lista-bans")) {
         Set<BanEntry> bannedPlayers = Bukkit.getBanList(BanList.Type.NAME).getBanEntries();
         Set<BanEntry> bannedIps = Bukkit.getBanList(BanList.Type.IP).getBanEntries();
 
@@ -1527,7 +1525,7 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
         }
 
         return true;
-    } else if (command.getName().equalsIgnoreCase("invest")) {
+    } else if (command.getName().equalsIgnoreCase("invest") || command.getName().equalsIgnoreCase("investir")) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if (args.length == 1) {
@@ -1538,7 +1536,7 @@ else if (command.getName().equalsIgnoreCase("lockchestressettingall")) {
                     player.sendMessage("Por favor, insira um valor valido.");
                 }
             } else {
-                player.sendMessage("Uso correto: /invest <quantidade>");
+                player.sendMessage("Uso correto: /investir <quantidade>");
             }
         } else {
             sender.sendMessage("Este comando so pode ser usado por jogadores.");
@@ -1779,139 +1777,89 @@ private void processInvestments(Player player, String lang) {
     }
 }
 
-    private void checkBalance(Player player) {
-    getLogger().info("🔄 Iniciando verificação de saldo para " + player.getName());
+    private void checkPandaBalance(Player player) {
+    getLogger().info("🔄 Iniciando verificação de saldo Panda para " + player.getName());
 
     CompletableFuture.runAsync(() -> {
         try {
-            // 🔍 Buscar saldo na Solana
+            // 🔍 Buscar saldo do Panda (armazenado no banco de dados)
             double balance = solana.getSolBalance(player.getName());
-            getLogger().info("✅ Saldo obtido: " + balance + " SOL");
+            getLogger().info("✅ Saldo Panda obtido: " + balance);
+            
             player.sendMessage(
-    Component.text("💰 ").color(TextColor.color(0xFFFF00)) // Ícone de dinheiro (Amarelo)
-    .append(Component.text(balance + " ").color(TextColor.color(0xFFFF00))) // Saldo (Roxo)
-    .append(Component.text("PAN").color(TextColor.color(0xFFFFFF))) // Branco
-    .append(Component.text("DA").color(TextColor.color(0x800080))) // Verde
-    .append(Component.text("COIN").color(TextColor.color(0x00FF00))) // Vermelho
-);
-player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
- player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
+                Component.text("💰 ").color(TextColor.color(0xFFFF00)) // Amarelo
+                .append(Component.text(balance + " ").color(TextColor.color(0xFFFF00)))
+                .append(Component.text("PAN").color(TextColor.color(0xFFFFFF))) // Branco
+                .append(Component.text("DA").color(TextColor.color(0x800080))) // Roxo
+                .append(Component.text("COIN").color(TextColor.color(0x00FF00))) // Verde
+            );
 
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
+            player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
 
-            // ✅ Exibir saldo com ícones e efeitos
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            // ✅ Exibir saldo com labels corretos
+            player.getScheduler().run(plugin, (task) -> {
                 if (player.isOnline()) {
-                    getLogger().info("📢 Enviando mensagem de saldo para " + player.getName());
-                    
                     String lang = store.getPlayerLanguage(player);
                     Component message;
 
                     if (lang.equals("pt-BR")) {
-                        message = Component.text("💰 Seu saldo atual de SOL é: ")
+                        message = Component.text("💰 Seu saldo atual de PANDA COIN é: ")
                                 .color(TextColor.color(0x800080))
-                                .append(Component.text(" " + String.format("%.4f SOL", balance))
+                                .append(Component.text(" " + String.format("%.2f", balance))
                                 .color(TextColor.color(0xFFFF00)));
                     } else if (lang.equals("es-ES")) {
-                        message = Component.text("💰 Tu saldo actual de SOL es: ")
+                        message = Component.text("💰 Tu saldo actual de PANDA COIN es: ")
                                 .color(TextColor.color(0x800080))
-                                .append(Component.text(" " + String.format("%.4f SOL", balance))
+                                .append(Component.text(" " + String.format("%.2f", balance))
                                 .color(TextColor.color(0xFFFF00)));
                     } else {
-                        message = Component.text("💰 Your current SOL balance is: ")
+                        message = Component.text("💰 Your current PANDA COIN balance is: ")
                                 .color(TextColor.color(0x800080))
-                                .append(Component.text(" " + String.format("%.4f SOL", balance))
+                                .append(Component.text(" " + String.format("%.2f", balance))
                                 .color(TextColor.color(0xFFFF00)));
                     }
                     player.sendMessage(message);
-
-                    // 🎵 Toca um som de dinheiro
-                    
-                    getLogger().info("🎵 Som de dinheiro tocado para " + player.getName());
-
-                    // ✨ Cria um efeito de partículas douradas
-                    player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
-                    getLogger().info("✨ Efeito de partículas criado para " + player.getName());
                 }
-            }, 0L);
+            }, null);
 
         } catch (Exception e) {
-            getLogger().info("❌ Erro ao verificar saldo para " + player.getName() + ": " + e.getMessage());
-
-            // ❌ Mensagem de erro com ícone e cor
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline()) {
-                    String lang = store.getPlayerLanguage(player);
-                    Component errorMessage;
-
-                    if (lang.equals("pt-BR")) {
-                        errorMessage = Component.text("❌ Ocorreu um erro ao verificar seu saldo. Tente novamente mais tarde.")
-                                .color(TextColor.color(0xFF0000));
-                    } else if (lang.equals("es-ES")) {
-                        errorMessage = Component.text("❌ Ocurrió un error al verificar tu saldo. Inténtalo de nuevo más tarde.")
-                                .color(TextColor.color(0xFF0000));
-                    } else {
-                        errorMessage = Component.text("❌ An error occurred while checking your balance. Please try again later.")
-                                .color(TextColor.color(0xFF0000));
-                    }
-                    player.sendMessage(errorMessage);
-                }
-            }, 0L);
+            getLogger().info("❌ Erro ao verificar saldo Panda para " + player.getName() + ": " + e.getMessage());
             e.printStackTrace();
         }
     });
-
-    getLogger().info("✅ Verificação de saldo concluída para " + player.getName());
 }
 
 
 public void ajustarSaldo(Player player, String tipo, double valor) {
-    System.out.println("DEBUG (ajustarSaldo): Iniciado para " + player.getName() + ", tipo: " + tipo + ", quantia: " + valor);
-
-    // *** NOVA LINHA DE DEBUG: Verificar se 'plugin' é nulo ***
     if (this.plugin == null) {
-        System.err.println("ERROR (ajustarSaldo): Instância do plugin é NULA! Não é possível agendar a tarefa.");
-        
-        // Saia do método para evitar um NullPointerException
         return;
     }
-    System.out.println("DEBUG (ajustarSaldo): Instância do plugin está OK.");
 
-    final String playerName = player.getName(); // Captura o nome do jogador
+    final String playerName = player.getName();
 
     try {
-        // Bloco try-catch para capturar exceções do próprio runTaskLater
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> { // Use 'this.plugin' para clareza
+        // No Folia, comandos do console devem ser despachados via GlobalRegionScheduler
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
             try {
-                System.out.println("DEBUG (ajustarSaldo - Main Thread): Executando comando eco para " + playerName + "...");
                 if (tipo.equalsIgnoreCase("give")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco give " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("take")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco take " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("set")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco set " + playerName + " " + valor);
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Executado 'eco set " + playerName + " " + valor + "'");
                 } else {
-                    Player onlinePlayer = Bukkit.getPlayer(playerName);
-                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
-                        onlinePlayer.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
-                    }
-                    System.out.println("DEBUG (ajustarSaldo - Main Thread): Tipo de ajuste inválido para " + playerName + ": " + tipo);
+                    player.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
                 }
-                System.out.println("DEBUG (ajustarSaldo - Main Thread): Comando eco despachado com sucesso.");
             } catch (Exception e) {
-                System.err.println("ERROR (ajustarSaldo - Main Thread - Inner): Erro ao despachar comando eco para " + playerName);
-                e.printStackTrace(); // Imprime o stack trace completo da exceção interna!
+                getLogger().severe("ERROR (ajustarSaldo): Erro ao despachar comando eco para " + playerName);
+                e.printStackTrace();
             }
-        }, 0L); // 0L significa executar na próxima tick disponível
-
-        System.out.println("DEBUG (ajustarSaldo): Chamada para agendador da thread principal finalizada.");
+        });
 
     } catch (Exception e) {
-        // Este catch pegará exceções se o próprio agendamento falhar (muito raro, mas possível)
-        System.err.println("ERROR (ajustarSaldo - Outer): Exceção ao agendar tarefa com Bukkit.getScheduler()!");
-        e.printStackTrace(); // Imprime o stack trace completo da exceção de agendamento!
+        getLogger().severe("ERROR (ajustarSaldo): Exceção ao agendar tarefa no GlobalRegionScheduler!");
+        e.printStackTrace();
     }
 }
 

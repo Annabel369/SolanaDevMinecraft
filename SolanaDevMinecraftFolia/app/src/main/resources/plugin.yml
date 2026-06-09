@@ -9,174 +9,205 @@ folia-compatible: true
 folia-supported: true
 commands:
   saldo:
-    description: Mostra o saldo do jogador
+    description: Mostra o seu saldo no banco.
     usage: /saldo
-    permission: saldo.use
-  invest:
-    description: Realiza um investimento.
-    usage: /invest <quantidade>
-    aliases: [aplicar]
-  solbalance:
-    description: Verifica o saldo da carteira Solana.
-    usage: /solbalance
-    aliases: [solsaldo]
-  soltransfer:
+  investir:
+    description: Realiza um investimento no banco.
+    usage: /investir <quantidade>
+    aliases: [invest, aplicar]
+  solsaldo:
+    description: Verifica o saldo da sua carteira Solana.
+    usage: /solsaldo
+    aliases: [solbalance, solanabalance]
+  soltransferir:
     description: Transfere SOL para outro jogador.
-    usage: /soltransfer <quantidade> <jogador_destino>
-    aliases: [enviarSOL, solenvio]
-  buycurrency:
+    usage: /soltransferir <quantidade> <jogador_destino>
+    aliases: [enviarSOL, solenvio, soltransfer]
+  compracomsolana:
     description: Compra moedas do jogo usando Solana.
-    usage: /buycurrency <quantidade_SOL>
-    aliases: [compracomsolana]
-  createwallet:
-    description: Cria uma carteira Solana para o jogador.
-    usage: /createwallet
-    aliases: [carteira, solwallet]
-  buyapple:
+    usage: /compracomsolana <quantidade_SOL>
+    aliases: [buycurrency]
+  criarcarteira:
+    description: Cria uma nova carteira Solana para você.
+    usage: /criarcarteira
+    aliases: [carteira, solwallet, createwallet]
+  comprar_maca:
     description: Compra uma Maçã Encantada.
-    usage: /buyapple
-  buyemerald:
+    usage: /comprar_maca
+    aliases: [buyapple]
+  comprar_esmeralda:
     description: Compra uma Esmeralda.
-    usage: /buyemerald
-  buydiamond:
+    usage: /comprar_esmeralda
+    aliases: [buyemerald]
+  comprar_diamante:
     description: Compra um Diamante.
-    usage: /buydiamond
-  buygold:
+    usage: /comprar_diamante
+    aliases: [buydiamond]
+  comprar_ouro:
     description: Compra uma Barra de Ouro.
-    usage: /buygold
-  buyiron:
+    usage: /comprar_ouro
+    aliases: [buygold]
+  comprar_ferro:
     description: Compra uma Barra de Ferro.
-    usage: /buyiron
-  buynetherite:
+    usage: /comprar_ferro
+    aliases: [buyiron]
+  comprar_netherite:
     description: Compra uma Barra de Netherite.
-    usage: /buynetherite
-  buySpinningWand:
+    usage: /comprar_netherite
+    aliases: [buynetherite]
+  comprar_varinha:
     description: Compra uma Varinha Giratória.
-    usage: /buySpinningWand
-  buyLapis:
+    usage: /comprar_varinha
+    aliases: [buySpinningWand]
+  comprar_lapis:
     description: Compra um Lápis Lazúli.
-    usage: /buyLapis
-  buyQuartz:
+    usage: /comprar_lapis
+    aliases: [buyLapis]
+  comprar_quartzo:
     description: Compra um Quartzo.
-    usage: /buyQuartz
-  buyRedstone:
+    usage: /comprar_quartzo
+    aliases: [buyQuartz]
+  comprar_redstone:
     description: Compra uma Redstone.
-    usage: /buyRedstone
-  buyClay:
+    usage: /comprar_redstone
+    aliases: [buyRedstone]
+  comprar_argila:
     description: Compra um Bloco de Argila.
-    usage: /buyClay
-  buySandBlock:
+    usage: /comprar_argila
+    aliases: [buyClay]
+  comprar_areia:
     description: Compra um Bloco de Areia.
-    usage: /buySandBlock
-  buyAllTools:
+    usage: /comprar_areia
+    aliases: [buySandBlock]
+  comprar_ferramentas:
     description: Compra todas as Ferramentas.
-    usage: /buyAllTools
-  buyAllFood:
+    usage: /comprar_ferramentas
+    aliases: [buyAllTools]
+  comprar_comida:
     description: Compra toda a Comida.
-    usage: /buyAllFood
-  buySimpleBook:
+    usage: /comprar_comida
+    aliases: [buyAllFood]
+  comprar_livro:
     description: Compra um Livro Simples.
-    usage: /buySimpleBook
-  buyEmeraldBlock:
+    usage: /comprar_livro
+    aliases: [buySimpleBook]
+  comprar_bloco_esmeralda:
     description: Compra um Bloco de Esmeralda.
-    usage: /buyEmeraldBlock
-  buySimpleMap:
+    usage: /comprar_bloco_esmeralda
+    aliases: [buyEmeraldBlock]
+  comprar_mapa:
     description: Compra um Mapa Simples.
-    usage: /buySimpleMap
-  buySimpleCompass:
+    usage: /comprar_mapa
+    aliases: [buySimpleMap]
+  comprar_bussola:
     description: Compra uma Bússola Simples.
-    usage: /buySimpleCompass
-  buySimpleFishingRod:
+    usage: /comprar_bussola
+    aliases: [buySimpleCompass]
+  comprar_vara_pesca:
     description: Compra uma Vara de Pesca Simples.
-    usage: /buySimpleFishingRod
-  buyAxolotlBucket:
+    usage: /comprar_vara_pesca
+    aliases: [buySimpleFishingRod]
+  comprar_balde_peixe:
     description: Balde com peixe Simples.
-    usage: /buyAxolotlBucket
+    usage: /comprar_balde_peixe
+    aliases: [buyAxolotlBucket]
   transferirtokengamer:
     description: Transfere moeda do banco para o jogador.
     usage: /transferirtokengamer <quantidade>
-  refundsolana:
+  reembolsosolana:
     description: Solicita reembolso de SOL.
-    usage: /refundsolana <signature>
-  eco:
-    description: Gerencia o saldo do jogador (give, take, set, balance)
-    usage: /eco [give/take/set/balance] [jogador] [valor]
-    permission: eco.admin
-  ban:
+    usage: /reembolsosolana <signature>
+    aliases: [refundsolana]
+  economia:
+    description: Gerencia o saldo do jogador (dar, retirar, definir, saldo)
+    usage: /economia [give/take/set/balance] [jogador] [valor]
+    aliases: [eco]
+  banir:
     description: Bane um jogador do servidor.
-    usage: /ban [jogador] [motivo]
-    permission: eco.admin
-  unban:
+    usage: /banir [jogador] [motivo]
+    aliases: [ban]
+  desbanir:
     description: Desbane um jogador do servidor.
-    usage: /unban [jogador]
-    permission: eco.admin
-  unban-ip:
+    usage: /desbanir [jogador]
+    aliases: [unban]
+  desbanir-ip:
     description: Desbane um endereço IP do servidor.
-    usage: /unban-ip [endereço IP]
-    permission: eco.admin
-  list-bans:
+    usage: /desbanir-ip [endereço IP]
+    aliases: [unban-ip]
+  lista-bans:
     description: Lista jogadores e IPs banidos do servidor.
-    usage: /list-bans
-    permission: eco.admin
+    usage: /lista-bans
+    aliases: [list-bans]
   tpa:
     description: Solicita teleporte para outro jogador.
     usage: /tpa [jogador]
-  back:
+  voltar:
     description: Retorna à última posição antes do teleporte ou morte.
-    usage: /back
-    permission: back.use
-  sethome:
+    usage: /voltar
+    aliases: [back]
+  definircasa:
     description: Define a casa do jogador.
-    usage: /sethome <nome>
-  home:
+    usage: /definircasa <nome>
+    aliases: [sethome]
+  casa:
     description: Teleporta o jogador para sua casa.
-    usage: /home <nome>
-  lockchest:
+    usage: /casa <nome>
+    aliases: [home]
+  trancarbau:
     description: Tranca um baú com senha.
-    usage: /lockchest [senha]
-  unlockchest:
+    usage: /trancarbau [senha]
+    aliases: [lockchest]
+  destrancarbau:
     description: Destranca um baú usando uma senha.
-    usage: /unlockchest [senha]
-  tpaccept:
+    usage: /destrancarbau [senha]
+    aliases: [unlockchest]
+  tpaceitar:
     description: Aceita um pedido de teleporte.
-    usage: /tpaccept
-  tpdeny:
+    usage: /tpaceitar
+    aliases: [tpaccept]
+  tprecusar:
     description: Recusa um pedido de teleporte.
-    usage: /tpdeny
-  homereset:
-    description: Reseta a casa do jogador.
-    usage: /homereset
-    permission: home.use
-  lockchestressettingall:
+    usage: /tprecusar
+    aliases: [tpdeny]
+  resetarcasas:
+    description: Reseta todas as casas do servidor.
+    usage: /resetarcasas
+    aliases: [homereset]
+  resetarbaus:
     description: Reseta todas as senhas de baús.
-    usage: /lockchestressettingall
-    permission: lockchest.admin
-  buyNetherRelic:
+    usage: /resetarbaus
+    aliases: [lockchestressettingall]
+  comprar_reliquia_nether:
     description: Compra uma Relíquia do Nether.
-    usage: /buyNetherRelic
-  buyTreeDebugger:
+    usage: /comprar_reliquia_nether
+    aliases: [buyNetherRelic]
+  comprar_depurador:
     description: Compra um Depurador de Árvore.
-    usage: /buyTreeDebugger
-  buyWingRelic:
+    usage: /comprar_depurador
+    aliases: [buyTreeDebugger]
+  comprar_reliquia_asa:
     description: Compra uma Relíquia de Asa.
-    usage: /buyWingRelic
-  buyBootRelic:
+    usage: /comprar_reliquia_asa
+    aliases: [buyWingRelic]
+  comprar_reliquia_bota:
     description: Compra uma Relíquia de Bota.
-    usage: /buyBootRelic
-  buyThorAxe:
+    usage: /comprar_reliquia_bota
+    aliases: [buyBootRelic]
+  comprar_machado_thor:
     description: Compra o Machado do Thor.
-    usage: /buyThorAxe
+    usage: /comprar_machado_thor
+    aliases: [buyThorAxe]
   limparTrilhaDeLuz:
     description: Limpa a trilha de luz do jogador.
     usage: /limparTrilhaDeLuz
-    permission: limparTrilhaDeLuz.use
-  buyShulkerKit:
+  comprar_kit_shulker:
     description: Compra um Kit Shulker.
-    usage: /buyShulkerKit
-  stairs:
+    usage: /comprar_kit_shulker
+    aliases: [buyShulkerKit]
+  escadas:
     description: Compra escadas.
-    usage: /stairs <quantidade>
-    permission: stairs.use
+    usage: /escadas <quantidade>
+    aliases: [stairs]
   airdrop:
     description: Solicita um airdrop de tokens.
     usage: /airdrop
