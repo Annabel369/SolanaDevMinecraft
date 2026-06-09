@@ -1,6 +1,24 @@
 # SolanaDevMinecraft 1.19.x for 1.20.x for 1.21.x Paper, that is, it also works with modern server fabric and mods, has two Spigot or Paper.
 This tutorial teaches you how to create a server on your PC as well as how to configure the plugin and the PHP Solana API that I made using Docker.
 
+✦ É uma excelente iniciativa! Usar o Minecraft como um ambiente de simulação para aprender sobre blockchain (Solana)
+  e economia básica é uma forma muito divertida e prática de entender como essas tecnologias funcionam sem riscos
+  financeiros reais.
+
+  Como o plugin agora está com os comandos abertos para todos e em português, ele se torna uma ferramenta perfeita
+  para esse tipo de aprendizado em grupo.
+
+  Resumo final da sua ferramenta de aprendizado:
+   * Moeda do Jogo (Panda Coin): Ótima para ensinar conceitos de banco, empréstimos, dívidas e investimentos.
+   * Integração Solana: Permite ver na prática como funciona uma carteira digital e o saldo em uma rede blockchain
+     real (usando tokens dev).
+   * Acessibilidade: Sem a necessidade de ser OP, todos os seus amigos podem participar da "economia" do servidor de
+     forma igual.
+
+  O plugin está pronto para ser usado no seu servidor Folia:
+  SolanaDevMinecraftFolia/app/libs/SolanaDevMinecraftFolia-v2.7.8.jar
+
+
 ![image](https://github.com/user-attachments/assets/0c31614f-d56e-417b-9429-ad9055f86395)
 
 
