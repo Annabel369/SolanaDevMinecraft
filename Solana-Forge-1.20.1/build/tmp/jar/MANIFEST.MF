@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Specification-Title: solanaforge
+Specification-Vendor: SolanaDev
+Specification-Version: 1
+Implementation-Title: solana-forge
+Implementation-Version: 1.0.0
+Implementation-Vendor: SolanaDev
+Implementation-Timestamp: 2026-06-10T16:51:32-0300
+

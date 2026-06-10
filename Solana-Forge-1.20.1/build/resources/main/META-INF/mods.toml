@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+issueTrackerURL="https://solanadev.com"
+
+[[mods]]
+modId="solanaforge"
+version="1.0.0"
+displayName="Solana Forge"
+authors="Amauri Bueno dos Santos"
+description='''
+Mod que permite integrar Solana no Minecraft Forge 1.20.1
+'''
+
+[[dependencies.solanaforge]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.solanaforge]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
