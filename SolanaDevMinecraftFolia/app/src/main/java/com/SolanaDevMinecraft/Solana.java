@@ -369,7 +369,7 @@ private void sendTransactionMessage(Player sender, String recipient, double amou
             // Consulta para buscar a carteira vinculada ao jogador usando a conexão existente
             String query = "SELECT c.endereco FROM carteiras c JOIN jogadores j ON c.jogador_id = j.id WHERE LOWER(j.nome) = LOWER(?)";
             try (PreparedStatement stmt = this.connection.prepareStatement(query)) {
-                stmt.setString(1, username.trim());
+                stmt.setString(1, username.replace(" ", "_").trim().toLowerCase());
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next()) {
                         walletAddress = rs.getString("endereco");
@@ -551,12 +551,12 @@ public void buyGameCurrency(Player player, double solAmount) {
                         "UPDATE banco SET saldo = saldo + ? WHERE jogador = ?"
                 )) {
                     updateStatement.setInt(1, gameCurrencyAmount);
-                    updateStatement.setString(2, player.getName());
+                    updateStatement.setString(2, player.getName().replace(" ", "_").toLowerCase());
                     int rowsUpdated = updateStatement.executeUpdate();
 
                     if (rowsUpdated > 0) {
                         // 🔹 Registra a transação no livro caixa
-                        registerTransaction(player.getName(), "compra", solAmount, "SOL", signature);
+                        registerTransaction(player.getName().replace(" ", "_").toLowerCase(), "compra", solAmount, "SOL", signature);
                         //ajustarSaldo(player, "give", gameCurrencyAmount);
 
                         if (lang.equals("pt-BR")) {
@@ -847,54 +847,30 @@ public static String convertPrivateKeyToHex(String jsonResponse) {
     // 📌 Método para ajustar o saldo do jogador do sql do plugin EssentialsX (nao e necessario mas tenta mater os dados iguais do sql e do mysql)
 
     public void ajustarSaldo(Player player, String tipo, double valor) {
-    LOGGER.info("DEBUG (ajustarSaldo): Iniciado para " + player.getName() + ", tipo: " + tipo + ", quantia: " + valor);
-
-    // *** NOVA LINHA DE DEBUG: Verificar se 'plugin' é nulo ***
     if (this.plugin == null) {
-        System.err.println("ERROR (ajustarSaldo): Instância do plugin é NULA! Não é possível agendar a tarefa.");
-player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
- player.getWorld().spawnParticle(Particle.FIREWORK, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
-        // Saia do método para evitar um NullPointerException
         return;
     }
-    LOGGER.info("DEBUG (ajustarSaldo): Instância do plugin está OK.");
 
-    final String playerName = player.getName(); // Captura o nome do jogador
+    final String playerName = player.getName();
 
     try {
-        // Bloco try-catch para capturar exceções do próprio runTaskLater
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> { // Use 'this.plugin' para clareza
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
             try {
-                LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Executando comando eco para " + playerName + "...");
                 if (tipo.equalsIgnoreCase("give")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + playerName + " " + valor);
-                    LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Executado 'eco give " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("take")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + playerName + " " + valor);
-                    LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Executado 'eco take " + playerName + " " + valor + "'");
                 } else if (tipo.equalsIgnoreCase("set")) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco set " + playerName + " " + valor);
-                    LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Executado 'eco set " + playerName + " " + valor + "'");
                 } else {
-                    Player onlinePlayer = Bukkit.getPlayer(playerName);
-                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
-                        onlinePlayer.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
-                    }
-                    LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Tipo de ajuste inválido para " + playerName + ": " + tipo);
+                    player.sendMessage("Comando inválido! Use 'give' ou 'take' ou set.");
                 }
-                LOGGER.info("DEBUG (ajustarSaldo - Main Thread): Comando eco despachado com sucesso.");
             } catch (Exception e) {
-                System.err.println("ERROR (ajustarSaldo - Main Thread - Inner): Erro ao despachar comando eco para " + playerName);
-                e.printStackTrace(); // Imprime o stack trace completo da exceção interna!
+                LOGGER.severe("ERROR (ajustarSaldo): Erro ao despachar comando eco para " + playerName);
             }
-        }, 0L); // 0L significa executar na próxima tick disponível
-
-        LOGGER.info("DEBUG (ajustarSaldo): Chamada para agendador da thread principal finalizada.");
-
+        });
     } catch (Exception e) {
-        // Este catch pegará exceções se o próprio agendamento falhar (muito raro, mas possível)
-        System.err.println("ERROR (ajustarSaldo - Outer): Exceção ao agendar tarefa com Bukkit.getScheduler()!");
-        e.printStackTrace(); // Imprime o stack trace completo da exceção de agendamento!
+        LOGGER.severe("ERROR (ajustarSaldo): Exceção ao agendar tarefa!");
     }
 }
 
@@ -1107,13 +1083,17 @@ player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f,
 }
 
     public void transferirMoeda(Player player, String destinatario, double valor) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + destinatario + " " + valor);
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + destinatario + " " + valor);
+        });
         player.sendMessage("Você transferiu " + valor + " moedas para " + destinatario);
     }
 
     public void transferirMoedaBanco(String jogador, String destinatario, double valor) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + destinatario + " " + valor);
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + jogador + " " + valor);
+        Bukkit.getGlobalRegionScheduler().execute(this.plugin, () -> {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + destinatario + " " + valor);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco take " + jogador + " " + valor);
+        });
     }
 
 }

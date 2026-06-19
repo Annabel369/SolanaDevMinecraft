@@ -1,6 +1,4 @@
 package com.SolanaDevMinecraft;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -22,6 +20,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.NamedTextColor;
 import java.util.List;
 import java.util.Locale;
+import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
+
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
@@ -53,10 +54,6 @@ import java.util.HashMap;
 import org.bukkit.Location;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.TextDisplay;
-import org.bukkit.entity.Display.Billboard;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.Location;
@@ -67,10 +64,9 @@ import org.bukkit.World;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import java.util.stream.Collectors;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import java.util.stream.Collectors;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.Action;
@@ -105,8 +101,8 @@ public class App extends JavaPlugin implements Listener {
     private final Map<Player, String> playerNames = new HashMap<>();
     private final Map<Player, String> playerWallets = new HashMap<>();
     private final Set<UUID> jogadoresNotificados = new HashSet<>();
-    private final Map<UUID, Long> lastMoveTime = new HashMap<>();
-    private final Map<UUID, Entity> activePreviews = new HashMap<>();
+    private final Set<UUID> locatorBarEnabled = new HashSet<>();
+    private final Map<UUID, Entity> activePreviews = new HashMap<>(); // Para hologramas de inventário
 
     private Connection connection;
     private Solana solana;
@@ -192,37 +188,6 @@ public class App extends JavaPlugin implements Listener {
         // jogadores conectados
         for (Player player : Bukkit.getOnlinePlayers()) {
             processInvestments(player, player.locale().toString());
-            lastMoveTime.put(player.getUniqueId(), System.currentTimeMillis());
-        }
-
-        // 💤 Task de Detecção de AFK (Idle) - What Are They Up To
-        Bukkit.getGlobalRegionScheduler().runAtFixedRate(this, (task) -> {
-            long now = System.currentTimeMillis();
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                long lastMove = lastMoveTime.getOrDefault(player.getUniqueId(), now);
-                if (now - lastMove > 300000) { // 5 minutos AFK
-                    if (!activePreviews.containsKey(player.getUniqueId())) {
-                        showStatusIcon(player, "💤", -1); // Mostra ícone de sono indefinidamente
-                    }
-                }
-            }
-        }, 200L, 200L); // Checa a cada 10 segundos
-    }
-
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (event.getFrom().getBlockX() != event.getTo().getBlockX() ||
-            event.getFrom().getBlockY() != event.getTo().getBlockY() ||
-            event.getFrom().getBlockZ() != event.getTo().getBlockZ()) {
-            
-            Player player = event.getPlayer();
-            lastMoveTime.put(player.getUniqueId(), System.currentTimeMillis());
-            
-            // Se estava com ícone de AFK, remove
-            Entity preview = activePreviews.get(player.getUniqueId());
-            if (preview instanceof TextDisplay td && td.text() instanceof net.kyori.adventure.text.TextComponent tc && tc.content().equals("💤")) {
-                removeInventoryPreview(player);
-            }
         }
     }
 
@@ -291,6 +256,10 @@ public class App extends JavaPlugin implements Listener {
         // 🎉 Mensagem de boas-vindas
         jogador.sendTitle(ChatColor.GREEN + "Bem-vindo!", ChatColor.WHITE + jogador.getName(), 10, 70, 20);
         jogador.playSound(jogador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+
+        // 🧭 Inicia o localizador de amigos por padrão
+        locatorBarEnabled.add(jogador.getUniqueId());
+        startLocatorTask(jogador);
 
         jogador.sendMessage(ChatColor.GREEN + "🎉 Bem-vindo ao servidor, " + jogador.getName() + "!");
 
@@ -598,32 +567,11 @@ public class App extends JavaPlugin implements Listener {
         }
     }
 
-    // 💻 Efeito Visual: Digitando no Chat (Rádio/Terminal na mão)
-    @EventHandler
-    public void aoDigitarNoChat(AsyncChatEvent event) {
-        Player player = event.getPlayer();
-        player.getScheduler().execute(this, () -> {
-            // Se já estiver com algo salvo (ex: abriu inventário e digitou), não sobrescreve
-            if (savedOffhandItems.containsKey(player.getUniqueId())) return;
-
-            ItemStack backup = player.getInventory().getItemInOffHand().clone();
-            player.getInventory().setItemInOffHand(new ItemStack(Material.REPEATER));
-            
-            // 💬 Mostra ícone de digitando (What Are They Up To)
-            showStatusIcon(player, "💬", 60L);
-
-            player.getScheduler().runDelayed(this, (task) -> {
-                player.getInventory().setItemInOffHand(backup);
-            }, null, 60L);
-        }, null, 0);
-    }
-
-    // 📖 Efeito Visual: Abrindo Inventário (Jornal na mão + Holograma de itens)
+    // 📖 Efeito Visual de Inventário (Jornal + Holograma)
     @EventHandler
     public void aoAbrirInventarioVisual(InventoryOpenEvent event) {
         if (!(event.getPlayer() instanceof Player player)) return;
-        // Ignora o inventário 'E' do próprio jogador
-        if (event.getInventory().getType() == InventoryType.CRAFTING || event.getInventory().getType() == InventoryType.PLAYER) return;
+        if (event.getInventory().getType().name().equals("CRAFTING")) return;
 
         ItemStack itemAtual = player.getInventory().getItemInOffHand();
         savedOffhandItems.put(player.getUniqueId(), itemAtual.clone());
@@ -641,13 +589,25 @@ public class App extends JavaPlugin implements Listener {
         removeInventoryPreview(player);
     }
 
+    // 💻 Efeito "Digitando/Terminal"
+    @EventHandler
+    public void aoDigitarNoChat(io.papermc.paper.event.player.AsyncChatEvent event) {
+        Player player = event.getPlayer();
+        player.getScheduler().execute(this, () -> {
+            ItemStack backup = player.getInventory().getItemInOffHand().clone();
+            player.getInventory().setItemInOffHand(new ItemStack(Material.REPEATER));
+            player.getScheduler().runDelayed(this, (task) -> {
+                player.getInventory().setItemInOffHand(backup);
+            }, null, 60L);
+        }, null, 0);
+    }
+
     @EventHandler
     public void aoDormir(PlayerBedEnterEvent event) {
         if (event.getBedEnterResult() != PlayerBedEnterEvent.BedEnterResult.OK)
             return; // Apenas define a home se o jogador conseguir dormir
 
         Player jogador = event.getPlayer();
-        showStatusIcon(jogador, "🛌", -1); // 🛌 Mostra ícone de sono (What Are They Up To)
         Location cama = event.getBed().getLocation(); // Obtém a localização correta da cama
         cama.setY(cama.getY() + 1); // Ajusta a Y para evitar que o jogador fique preso
 
@@ -902,10 +862,10 @@ public class App extends JavaPlugin implements Listener {
                             solana.buyGameCurrency(player, solAmount);
                         });
                     } catch (NumberFormatException e) {
-                        openShopGUI(player);
+                        player.sendMessage("Uso correto: /compracomsolana <quantidade_SOL>");
                     }
                 } else {
-                    openShopGUI(player);
+                    player.sendMessage("Uso correto: /compracomsolana <quantidade_SOL>");
                 }
             } else {
                 sender.sendMessage("Este comando só pode ser usado por jogadores.");
@@ -1102,74 +1062,58 @@ public class App extends JavaPlugin implements Listener {
             return true;
         } else if (command.getName().equalsIgnoreCase("buySimpleCompass")
                 || command.getName().equalsIgnoreCase("comprar_bussola")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buySimpleCompass(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buySimpleCompass(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buySimpleFishingRod")
                 || command.getName().equalsIgnoreCase("comprar_vara_pesca")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buySimpleFishingRod(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buySimpleFishingRod(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buyAxolotlBucket")
                 || command.getName().equalsIgnoreCase("comprar_balde_peixe")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buyAxolotlBucket(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buyAxolotlBucket(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buyRedstone")
                 || command.getName().equalsIgnoreCase("comprar_redstone")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buyRedstoneBlock(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buyRedstoneBlock(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buySandBlock")
                 || command.getName().equalsIgnoreCase("comprar_areia")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buySandBlock(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buySandBlock(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buyAllTools")
                 || command.getName().equalsIgnoreCase("comprar_ferramentas")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buyAllTools(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buyAllTools(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buyAllFood")
                 || command.getName().equalsIgnoreCase("comprar_comida")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buyAllFood(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buyAllFood(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buySimpleBook")
                 || command.getName().equalsIgnoreCase("comprar_livro")) {
-            Player target = getTargetPlayer(sender, args);
-            if (target != null) {
-                store.buySimpleBook(target);
-            } else {
-                sender.sendMessage("Jogador não encontrado ou comando inválido.");
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
+                store.buySimpleBook(player);
             }
             return true;
         } else if (command.getName().equalsIgnoreCase("buyWingRelic")
@@ -1734,6 +1678,18 @@ public class App extends JavaPlugin implements Listener {
                 sender.sendMessage("Este comando so pode ser usado por jogadores.");
             }
             return true;
+        } else if (command.getName().equalsIgnoreCase("locator") || command.getName().equalsIgnoreCase("localizador")) {
+            if (sender instanceof Player player) {
+                if (locatorBarEnabled.contains(player.getUniqueId())) {
+                    locatorBarEnabled.remove(player.getUniqueId());
+                    player.sendMessage(ChatColor.RED + "🧭 Localizador desativado.");
+                } else {
+                    locatorBarEnabled.add(player.getUniqueId());
+                    startLocatorTask(player);
+                    player.sendMessage(ChatColor.GREEN + "🧭 Localizador ativado!");
+                }
+            }
+            return true;
         }
         return false;
     }
@@ -1969,10 +1925,6 @@ public class App extends JavaPlugin implements Listener {
             try {
                 // 🔍 Buscar saldo do Panda (armazenado no banco de dados)
                 double balance = solana.getSolBalance(player.getName());
-                
-                // 🔄 Sincronizar saldo com o plugin de economia
-                ajustarSaldo(player, "set", balance);
-                
                 getLogger().info("✅ Saldo Panda obtido: " + balance);
 
                 player.sendMessage(
@@ -2139,32 +2091,65 @@ public class App extends JavaPlugin implements Listener {
         jogador.sendMessage(Component.text("💡 Trilha luminosa removida!").color(NamedTextColor.YELLOW));
     }
 
-    @EventHandler
-    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        lastMoveTime.remove(player.getUniqueId());
-        removeInventoryPreview(player);
-    }
+    /**
+     * 🧭 Sistema "See what your FRIENDS are up to" (Locator Bar)
+     * Cria uma bússola visual na ActionBar para mostrar a direção dos outros jogadores.
+     */
+    private void startLocatorTask(Player player) {
+        player.getScheduler().runAtFixedRate(this, (task) -> {
+            if (!player.isOnline() || !locatorBarEnabled.contains(player.getUniqueId())) {
+                task.cancel();
+                return;
+            }
 
-    @EventHandler
-    public void aoAcordar(org.bukkit.event.player.PlayerBedLeaveEvent event) {
-        removeInventoryPreview(event.getPlayer());
+            Component bar = Component.text("");
+            Location pLoc = player.getLocation();
+            float pYaw = (pLoc.getYaw() % 360 + 360) % 360; // Normaliza yaw para 0-360
+
+            for (int i = -15; i <= 15; i++) {
+                float angle = (pYaw + i * 6) % 360;
+                if (angle < 0) angle += 360;
+
+                // Pontos Cardeais
+                if (Math.abs(angle - 0) < 3) bar = bar.append(Component.text("S").color(NamedTextColor.AQUA));
+                else if (Math.abs(angle - 90) < 3) bar = bar.append(Component.text("W").color(NamedTextColor.AQUA));
+                else if (Math.abs(angle - 180) < 3) bar = bar.append(Component.text("N").color(NamedTextColor.AQUA));
+                else if (Math.abs(angle - 270) < 3) bar = bar.append(Component.text("E").color(NamedTextColor.AQUA));
+                else {
+                    boolean foundPlayer = false;
+                    for (Player other : Bukkit.getOnlinePlayers()) {
+                        if (other.equals(player) || !other.getWorld().equals(player.getWorld())) continue;
+                        
+                        double dx = other.getLocation().getX() - pLoc.getX();
+                        double dz = other.getLocation().getZ() - pLoc.getZ();
+                        double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));
+                        targetYaw = (targetYaw % 360 + 360) % 360;
+
+                        if (Math.abs(angle - targetYaw) < 3) {
+                            bar = bar.append(Component.text("◆").color(NamedTextColor.GREEN));
+                            foundPlayer = true;
+                            break;
+                        }
+                    }
+                    if (!foundPlayer) bar = bar.append(Component.text(".").color(NamedTextColor.GRAY));
+                }
+            }
+            player.sendActionBar(bar);
+        }, null, 20L, 5L); // Atualiza a cada 5 ticks (1/4 de segundo) para suavidade
     }
 
     /**
      * 📦 Sistema de Preview de Inventário (Display Entities)
      */
     private void spawnInventoryPreview(Player player, Inventory inv) {
-        removeInventoryPreview(player); // Remove duplicatas se houver
-
         String summary = getInventorySummary(inv);
-        String icon = getInventoryIcon(inv.getType());
+        if (summary.isEmpty()) return;
 
         player.getScheduler().execute(this, () -> {
             TextDisplay display = (TextDisplay) player.getWorld().spawnEntity(
                 player.getLocation().add(0, 2.3, 0), EntityType.TEXT_DISPLAY);
             
-            display.text(Component.text(icon + " " + formatMaterialName(inv.getType()) + "\n").color(NamedTextColor.GOLD)
+            display.text(Component.text("📦 " + inv.getType().toString() + "\n").color(NamedTextColor.GOLD)
                     .append(Component.text(summary).color(NamedTextColor.WHITE)));
             
             display.setBillboard(Billboard.CENTER);
@@ -2179,61 +2164,9 @@ public class App extends JavaPlugin implements Listener {
                     task.cancel();
                     return;
                 }
-                display.teleportAsync(player.getLocation().add(0, 2.3, 0));
+                display.teleport(player.getLocation().add(0, 2.3, 0));
             }, null, 1L, 1L);
         }, null, 0);
-    }
-
-    private void showStatusIcon(Player player, String icon, long durationTicks) {
-        removeInventoryPreview(player); // Remove anterior
-        player.getScheduler().execute(this, () -> {
-            TextDisplay display = (TextDisplay) player.getWorld().spawnEntity(
-                player.getLocation().add(0, 2.3, 0), EntityType.TEXT_DISPLAY);
-            
-            display.text(Component.text(icon).color(NamedTextColor.GOLD));
-            display.setBillboard(Billboard.CENTER);
-            display.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0)); // Transparente para apenas o ícone
-            display.setShadowed(true);
-            
-            UUID uuid = player.getUniqueId();
-            activePreviews.put(uuid, display);
-            
-            player.getScheduler().runAtFixedRate(this, (task) -> {
-                if (!player.isOnline() || !activePreviews.containsKey(uuid)) {
-                    display.remove();
-                    task.cancel();
-                    return;
-                }
-                display.teleportAsync(player.getLocation().add(0, 2.3, 0));
-            }, null, 1L, 1L);
-
-            if (durationTicks > 0) {
-                player.getScheduler().runDelayed(this, (task) -> {
-                    removeInventoryPreview(player);
-                }, null, durationTicks);
-            }
-        }, null, 0);
-    }
-
-    private String getInventoryIcon(InventoryType type) {
-        return switch (type) {
-            case CHEST, BARREL, SHULKER_BOX -> "📦";
-            case ANVIL -> "🔨";
-            case CRAFTING, WORKBENCH -> "🛠️";
-            case FURNACE, BLAST_FURNACE, SMOKER -> "🥘";
-            case BREWING -> "🧪";
-            case ENCHANTING -> "📖";
-            case LOOM -> "🧶";
-            case CARTOGRAPHY -> "🗺️";
-            case GRINDSTONE -> "🪨";
-            case SMITHING -> "🛡️";
-            case MERCHANT -> "💰";
-            case BEACON -> "🗼";
-            case HOPPER -> "🌪️";
-            case DISPENSER, DROPPER -> "📤";
-            case PLAYER -> "🎒";
-            default -> "📦";
-        };
     }
 
     private void removeInventoryPreview(Player player) {
@@ -2251,8 +2184,6 @@ public class App extends JavaPlugin implements Listener {
             }
         }
         
-        if (counts.isEmpty()) return "";
-
         return counts.entrySet().stream()
             .sorted(Map.Entry.<Material, Integer>comparingByValue().reversed())
             .limit(5)
@@ -2266,104 +2197,4 @@ public class App extends JavaPlugin implements Listener {
         return name.substring(0, 1).toUpperCase() + name.substring(1);
     }
 
-    private String formatMaterialName(InventoryType type) {
-        String name = type.name().toLowerCase().replace("_", " ");
-        return name.substring(0, 1).toUpperCase() + name.substring(1);
-    }
-
-
-
-    public void openShopGUI(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, Component.text("Loja Solana", NamedTextColor.GOLD));
-
-        inv.setItem(10, createGuiItem(Material.ENCHANTED_GOLDEN_APPLE, "§6Maçã Encantada", "§eClique para comprar"));
-        inv.setItem(11, createGuiItem(Material.EMERALD, "§aEsmeralda", "§eClique para comprar"));
-        inv.setItem(12, createGuiItem(Material.GOLD_BLOCK, "§6Bloco de Ouro", "§eClique para comprar"));
-        inv.setItem(13, createGuiItem(Material.DIAMOND_BLOCK, "§bBloco de Diamante", "§eClique para comprar"));
-        inv.setItem(14, createGuiItem(Material.EMERALD_BLOCK, "§aBloco de Esmeralda", "§eClique para comprar"));
-        inv.setItem(15, createGuiItem(Material.NETHERITE_BLOCK, "§8Bloco de Netherite", "§eClique para comprar"));
-        inv.setItem(16, createGuiItem(Material.IRON_BLOCK, "§fBloco de Ferro", "§eClique para comprar"));
-        
-        inv.setItem(19, createGuiItem(Material.LAPIS_BLOCK, "§1Bloco de Lápis Lazúli", "§eClique para comprar"));
-        inv.setItem(20, createGuiItem(Material.REDSTONE_BLOCK, "§cBloco de Redstone", "§eClique para comprar"));
-        inv.setItem(21, createGuiItem(Material.QUARTZ_BLOCK, "§fBloco de Quartzo", "§eClique para comprar"));
-        inv.setItem(22, createGuiItem(Material.CLAY, "§7Bloco de Argila", "§eClique para comprar"));
-        inv.setItem(23, createGuiItem(Material.SAND, "§eBloco de Areia", "§eClique para comprar"));
-        inv.setItem(24, createGuiItem(Material.NETHER_STAR, "§dRelíquia do Nether", "§eClique para comprar"));
-        inv.setItem(25, createGuiItem(Material.WARPED_FUNGUS_ON_A_STICK, "§3Varinha Giratória", "§eClique para comprar"));
-
-        inv.setItem(28, createGuiItem(Material.NETHERITE_AXE, "§4Machado do Thor", "§eClique para comprar"));
-        inv.setItem(29, createGuiItem(Material.ELYTRA, "§bRelíquia de Asa", "§eClique para comprar"));
-        inv.setItem(30, createGuiItem(Material.NETHERITE_BOOTS, "§7Relíquia de Bota", "§eClique para comprar"));
-        inv.setItem(31, createGuiItem(Material.SHULKER_BOX, "§dKit Shulker", "§eClique para comprar"));
-        inv.setItem(32, createGuiItem(Material.GOLDEN_AXE, "§aDepurador de Árvore", "§eClique para comprar"));
-        
-        inv.setItem(37, createGuiItem(Material.NETHERITE_PICKAXE, "§fTodas as Ferramentas", "§eClique para comprar"));
-        inv.setItem(38, createGuiItem(Material.COOKED_BEEF, "§fToda a Comida", "§eClique para comprar"));
-        inv.setItem(39, createGuiItem(Material.BOOK, "§fLivro Simples", "§eClique para comprar"));
-        inv.setItem(40, createGuiItem(Material.MAP, "§fMapa Simples", "§eClique para comprar"));
-        inv.setItem(41, createGuiItem(Material.COMPASS, "§fBússola Simples", "§eClique para comprar"));
-        inv.setItem(42, createGuiItem(Material.FISHING_ROD, "§fVara de Pesca", "§eClique para comprar"));
-        inv.setItem(43, createGuiItem(Material.AXOLOTL_BUCKET, "§fBalde com Axolote", "§eClique para comprar"));
-
-        player.openInventory(inv);
-    }
-
-    private ItemStack createGuiItem(Material material, String name, String... lore) {
-        ItemStack item = new ItemStack(material, 1);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
-        meta.setLore(Arrays.asList(lore));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("Loja Solana")) return;
-        event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        Player player = (Player) event.getWhoClicked();
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
-
-        String displayName = clickedItem.getItemMeta().getDisplayName();
-        
-        if (displayName.contains("Maçã Encantada")) store.buyEnchantedApple(player);
-        else if (displayName.contains("Esmeralda")) store.buyEmerald(player);
-        else if (displayName.contains("Bloco de Ouro")) store.buyGoldBlock(player);
-        else if (displayName.contains("Bloco de Diamante")) store.buyDiamondBlock(player);
-        else if (displayName.contains("Bloco de Esmeralda")) store.buyEmeraldBlock(player);
-        else if (displayName.contains("Bloco de Netherite")) store.buyNetheriteBlock(player);
-        else if (displayName.contains("Bloco de Ferro")) store.buyIronBlock(player);
-        else if (displayName.contains("Bloco de Lápis Lazúli")) store.buyLapisBlock(player);
-        else if (displayName.contains("Bloco de Redstone")) store.buyRedstoneBlock(player);
-        else if (displayName.contains("Bloco de Quartzo")) store.buyQuartzBlock(player);
-        else if (displayName.contains("Bloco de Argila")) store.buyClayBlock(player);
-        else if (displayName.contains("Bloco de Areia")) store.buySandBlock(player);
-        else if (displayName.contains("Relíquia do Nether")) store.buyNetherRelic(player);
-        else if (displayName.contains("Varinha Giratória")) store.buySpinningWand(player);
-        else if (displayName.contains("Machado do Thor")) store.buyThorAxe(player);
-        else if (displayName.contains("Relíquia de Asa")) store.buyWingRelic(player);
-        else if (displayName.contains("Relíquia de Bota")) store.buyBootRelic(player);
-        else if (displayName.contains("Kit Shulker")) store.buyShulkerKit(player);
-        else if (displayName.contains("Depurador de Árvore")) store.buyTreeDebuggerAxe(player);
-        else if (displayName.contains("Todas as Ferramentas")) store.buyAllTools(player);
-        else if (displayName.contains("Toda a Comida")) store.buyAllFood(player);
-        else if (displayName.contains("Livro Simples")) store.buySimpleBook(player);
-        else if (displayName.contains("Mapa Simples")) store.buySimpleMap(player);
-        else if (displayName.contains("Bússola Simples")) store.buySimpleCompass(player);
-        else if (displayName.contains("Vara de Pesca")) store.buySimpleFishingRod(player);
-        else if (displayName.contains("Balde com Axolote")) store.buyAxolotlBucket(player);
-    }
-
-    private Player getTargetPlayer(CommandSender sender, String[] args) {
-        if (args.length > 0) {
-            return Bukkit.getPlayer(args[0]);
-        }
-        if (sender instanceof Player) {
-            return (Player) sender;
-        }
-        return null;
-    }
 }

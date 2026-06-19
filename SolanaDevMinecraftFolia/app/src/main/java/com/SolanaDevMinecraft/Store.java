@@ -14,20 +14,21 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionData;
-import org.bukkit.inventory.meta.PotionMeta; // 🔹 Correto para poções
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.inventory.meta.BlockStateMeta; // 🔹 Necessário para Shulker Box
-
-import org.bukkit.enchantments.Enchantment; // 🔹 Correto para encantamentos
 import org.bukkit.inventory.meta.EnchantmentStorageMeta; // 🔹 Necessário para livros encantados
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.BlockState;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.event.block.BlockBreakEvent;
 import java.util.Arrays;
 import java.sql.SQLException;
 
 
 
+import java.util.concurrent.CompletableFuture;
+import io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -49,6 +50,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import java.util.HashSet;
 import java.util.Set;
+import org.bukkit.Sound;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.block.Block;
@@ -79,8 +81,9 @@ public class Store {
 
     // 📌 Método genérico para verificar saldo e processar compras
     private boolean processPurchase(Player player, int price) {
+    String dbPlayerName = player.getName().replace(" ", "_").toLowerCase();
     try (PreparedStatement stmt = connection.prepareStatement("SELECT saldo FROM banco WHERE jogador = ?")) {
-        stmt.setString(1, player.getName());
+        stmt.setString(1, dbPlayerName);
 
         try (ResultSet rs = stmt.executeQuery()) {
             if (rs.next()) {
@@ -88,7 +91,7 @@ public class Store {
                 if (saldo >= price) {
                     try (PreparedStatement updateStmt = connection.prepareStatement("UPDATE banco SET saldo = saldo - ? WHERE jogador = ?")) {
                         updateStmt.setInt(1, price);
-                        updateStmt.setString(2, player.getName());
+                        updateStmt.setString(2, dbPlayerName);
                         updateStmt.executeUpdate();
                     }
                     return true;
@@ -178,7 +181,7 @@ public class Store {
     
     if (meta != null) {
         meta.setUnbreakable(true); // 🔥 Torna o capacete indestrutível
-        meta.displayName(Component.text("Relíquia ELmo Arcanjo Uriel").color(NamedTextColor.GOLD)); // 🔥 Define nome personalizado
+        meta.displayName(Component.text("Relíquia do Nether").color(NamedTextColor.GOLD)); // 🔥 Sincronizado com o Listener
         
         // 🔹 Adiciona encantamentos essenciais
         meta.addEnchant(Enchantment.FIRE_PROTECTION, 4, true); // 🔥 Proteção contra fogo máxima
@@ -189,9 +192,9 @@ public class Store {
     }
 
     // 🔹 Entrega o item dentro da região global para evitar problemas no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(netherRelic);
-    });
+    }, null, 0L);
 
     // 🔹 Define mensagem conforme o idioma do jogador
     String lang = getPlayerLanguage(player);
@@ -296,9 +299,9 @@ public void buyTreeDebuggerAxe(Player player) {
         axe.setItemMeta(meta);
     }
 
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(axe);
-    });
+    }, null, 0L);
 
     String lang = getPlayerLanguage(player);
     String message = switch (lang) {
@@ -329,9 +332,9 @@ public void buyBootRelic(Player player) {
         bootRelic.setItemMeta(meta);
     }
 
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(bootRelic);
-    });
+    }, null, 0L);
 
     String message = switch (getPlayerLanguage(player)) {
         case "pt-BR" -> "👢 Você comprou a Relíquia Meow Cat das Botas Celestiais por $" + price + "!";
@@ -357,15 +360,17 @@ public void buyShulkerKit(Player player) {
         Material.BLACK_SHULKER_BOX
     };
 
-    for (Material shulker : shulkerColors) {
-        ItemStack item = new ItemStack(shulker);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(Component.text("📦 Shulker Colorida").color(NamedTextColor.GOLD));
-            item.setItemMeta(meta);
+    player.getScheduler().execute(plugin, () -> {
+        for (Material shulker : shulkerColors) {
+            ItemStack item = new ItemStack(shulker);
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.displayName(Component.text("📦 Shulker Colorida").color(NamedTextColor.GOLD));
+                item.setItemMeta(meta);
+            }
+            player.getInventory().addItem(item);
         }
-        player.getInventory().addItem(item);
-    }
+    }, null, 0);
 
     String message = switch (getPlayerLanguage(player)) {
         case "pt-BR" -> "📦 Você comprou o Kit Shulker Colorida por $" + price + "!";
@@ -396,9 +401,9 @@ public void buyThorAxe(Player player) {
         thorAxe.setItemMeta(meta);
     }
 
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(thorAxe);
-    });
+    }, null, 0L);
 
     String message = switch (getPlayerLanguage(player)) {
         case "pt-BR" -> "⚡ Você empunha agora o Machado de Thor por $" + price + "!";
@@ -435,9 +440,9 @@ public void buyWingRelic(Player player) {
     }
 
     // 🔹 Entrega o item dentro da região global para evitar problemas no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(wingRelic);
-    });
+    }, null, 0L);
 
     // 🔹 Define mensagem conforme o idioma do jogador
     String message = switch (getPlayerLanguage(player)) {
@@ -492,10 +497,10 @@ public class WingRelicListener implements Listener {
 
     System.out.println("DEBUG (buyEnchantedApple): Compra processada com sucesso. Adicionando item...");
 
-    // 🔹 Adiciona a maçã encantada ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona a maçã encantada ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
-    });
+    }, null, 0L);
 
     System.out.println("DEBUG (buyEnchantedApple): Item adicionado. Ajustando saldo...");
     //ajustarSaldo(player, "take", price);
@@ -519,10 +524,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.emerald", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona a esmeralda ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona a esmeralda ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.EMERALD, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -543,10 +548,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buyGoldBlock", 10000); // 🔹 Obtém preço do config.yml, com fallback de 10000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de ouro ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de ouro ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.GOLD_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -567,10 +572,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buyDiamondBlock", 20000); // 🔹 Obtém preço do config.yml, com fallback de 20000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de diamante ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de diamante ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.DIAMOND_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -591,10 +596,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buyEmeraldBlock", 50000); // 🔹 Obtém preço do config.yml, com fallback de 50000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de esmeralda ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de esmeralda ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.EMERALD_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -614,11 +619,11 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buyNetheriteBlock", 100000); // 🔹 Obtém preço do config.yml, com fallback de 100000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona os itens ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona os itens ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.ANCIENT_DEBRIS, 10));
         player.getInventory().addItem(new ItemStack(Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -638,10 +643,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buyIronBlock", 5000); // 🔹 Obtém preço do config.yml, com fallback de 5000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de ferro ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de ferro ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.IRON_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -661,10 +666,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.lapis", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de lápis-lazúli ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de lápis-lazúli ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.LAPIS_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -684,10 +689,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.redstone", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de Redstone ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de Redstone ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.REDSTONE_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -707,10 +712,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.quartz", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de quartzo ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de quartzo ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.QUARTZ_BLOCK, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -730,10 +735,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.clay", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de argila ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de argila ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.CLAY, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -753,10 +758,10 @@ public class WingRelicListener implements Listener {
     int price = config.getInt("store.price.buySandBlock", 1000); // 🔹 Obtém preço do config.yml, com fallback de 1000
     if (!processPurchase(player, price)) return; // 🔹 Interrompe se a compra falhar
 
-    // 🔹 Adiciona o bloco de areia ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona o bloco de areia ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         player.getInventory().addItem(new ItemStack(Material.SAND, 1));
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -781,13 +786,13 @@ public void buyAllTools(Player player) {
         Material.DIAMOND_HOE, Material.DIAMOND_SWORD
     );
 
-    // 🔹 Adiciona as ferramentas ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona as ferramentas ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         for (Material tool : tools) {
             ItemStack toolItem = new ItemStack(tool, 1); // Adiciona 1 unidade de cada ferramenta
             player.getInventory().addItem(toolItem);
         }
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -816,13 +821,13 @@ public void buyAllFood(Player player) {
         Material.MELON_SLICE, Material.PUMPKIN_PIE, Material.COOKIE
     );
 
-    // 🔹 Adiciona os alimentos ao inventário do jogador dentro da região global
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Adiciona os alimentos ao inventário do jogador de forma segura
+    player.getScheduler().execute(plugin, () -> {
         for (Material food : foodItems) {
             ItemStack foodItem = new ItemStack(food, 5); // Adiciona 5 unidades de cada comida
             player.getInventory().addItem(foodItem);
         }
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -874,11 +879,11 @@ public void buySimpleMap(Player player) {
             "minecraft:give " + player.getName() + " filled_map 1"
         );
 
-        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+        player.getScheduler().execute(plugin, () -> {
             for (String command : commands) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
             }
-        });
+        }, null, 0L);
 
         String lang = getPlayerLanguage(player);
         String message = switch (lang) {
@@ -913,11 +918,11 @@ public void buySimpleCompass(Player player) {
     );
 
     // Executa os comandos na região correta para evitar conflitos no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    player.getScheduler().execute(plugin, () -> {
         for (String command : commands) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
-    });
+    }, null, 0L);
 
     // Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -947,12 +952,12 @@ public void buySimpleFishingRod(Player player) {
         "minecraft:give " + player.getName() + " fishing_rod 1"
     );
 
-    // 🔹 Executa os comandos dentro da região global para evitar conflitos no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Executa os comandos de forma segura no Folia
+    player.getScheduler().execute(plugin, () -> {
         for (String command : commands) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -976,12 +981,12 @@ public void buySpinningWand(Player player) {
         "minecraft:give " + player.getName() + " debug_stick 1"
     );
 
-    // 🔹 Executa os comandos dentro da região global para evitar conflitos no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Executa os comandos de forma segura no Folia
+    player.getScheduler().execute(plugin, () -> {
         for (String command : commands) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -1006,12 +1011,12 @@ public void buyAxolotlBucket(Player player) {
         "minecraft:give " + player.getName() + " axolotl_bucket 1"
     );
 
-    // 🔹 Executa os comandos dentro da região global para evitar conflitos no Folia
-    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+    // 🔹 Executa os comandos de forma segura no Folia
+    player.getScheduler().execute(plugin, () -> {
         for (String command : commands) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
-    });
+    }, null, 0L);
 
     // 🔹 Mensagem para o jogador
     String lang = getPlayerLanguage(player);
@@ -1062,15 +1067,17 @@ public void buyAxolotlBucket(Player player) {
 }
 
 public void transferirtokengamer(Player player, String recipient, double amount) {
+    String dbPlayerName = player.getName().replace(" ", "_").toLowerCase();
+    String dbRecipientName = recipient.replace(" ", "_").toLowerCase();
     try (PreparedStatement stmtJogador = connection.prepareStatement("UPDATE banco SET saldo = saldo - ? WHERE jogador = ?");
          PreparedStatement stmtDestinatario = connection.prepareStatement("UPDATE banco SET saldo = saldo + ? WHERE jogador = ?")) {
 
         stmtJogador.setDouble(1, amount);
-        stmtJogador.setString(2, player.getName()); // Corrigido: Usar o nome do jogador
+        stmtJogador.setString(2, dbPlayerName); // Corrigido: Usar o nome do jogador
         stmtJogador.executeUpdate();
 
         stmtDestinatario.setDouble(1, amount);
-        stmtDestinatario.setString(2, recipient); // Já está correto
+        stmtDestinatario.setString(2, dbRecipientName); // Já está correto
         stmtDestinatario.executeUpdate();
 
         // Comandos do Bukkit para manter a sincronização com o sistema do jogo

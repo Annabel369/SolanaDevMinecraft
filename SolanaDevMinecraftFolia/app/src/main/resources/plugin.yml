@@ -7,6 +7,7 @@ website: https://solanadev.com
 description: Plugin que permite ver token Solana Dev no Minecraft
 folia-compatible: true
 folia-supported: true
+
 commands:
   saldo:
     description: Mostra o seu saldo no banco.
@@ -211,11 +212,3 @@ commands:
   airdrop:
     description: Solicita um airdrop de tokens.
     usage: /airdrop
-
-
-
-
-
-  
-  
-  
